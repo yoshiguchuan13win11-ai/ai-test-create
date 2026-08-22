@@ -3,233 +3,264 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 問題演習ノート — Gemini製 テスト問題ジェネレーター</title>
+<title>テスト用紙メーカー — Gemini製 学校テスト作成ツール</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --desk: #3a2c20;
-    --desk-dark: #2c2118;
-    --paper: #f7f2e6;
-    --paper-edge: #ece4d0;
-    --line: #d8cdb0;
-    --ink: #232a3a;
-    --ink-soft: #5c6274;
-    --red: #b23a2e;
-    --red-dark: #8a2b21;
-    --red-soft: rgba(178,58,46,0.08);
+    --bg: #eef0f4;
+    --panel: #ffffff;
+    --panel-border: #e1e4ec;
+    --ink: #1c2333;
+    --ink-soft: #6b7284;
+    --primary: #1d3557;
+    --primary-dark: #13253f;
+    --primary-soft: rgba(29,53,87,0.07);
+    --accent: #c0392b;
+    --rule: #d3d7e0;
   }
-  *{ box-sizing: border-box; }
+  *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family:'Noto Sans JP', sans-serif;
     min-height:100vh;
-    background:
-      radial-gradient(ellipse at top, rgba(255,255,255,0.04), transparent 60%),
-      repeating-linear-gradient(90deg, var(--desk) 0px, var(--desk) 3px, var(--desk-dark) 3px, var(--desk-dark) 6px);
-    font-family:'Zen Kaku Gothic New', sans-serif;
-    color: var(--ink);
-    padding: 48px 16px 80px;
-    display:flex;
-    justify-content:center;
   }
 
-  .sheet{
-    position:relative;
-    width:100%;
-    max-width: 760px;
-    background:
-      linear-gradient(var(--paper), var(--paper)) padding-box,
-      repeating-linear-gradient(0deg, transparent 0px, transparent 35px, var(--line) 35px, var(--line) 36px);
-    background-color: var(--paper);
-    border-radius: 2px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 2px 0 var(--paper-edge);
-    padding: 44px 40px 56px 74px;
-    transform: rotate(-0.4deg);
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 28px;
+    background: var(--primary);
+    color:#fff;
   }
-  .sheet::before{
-    content:"";
-    position:absolute;
-    top:0; bottom:0; left:52px;
-    width:2px;
-    background: rgba(178,58,46,0.35);
+  .topbar h1{
+    font-size: 16px; font-weight:700; margin:0; letter-spacing:0.02em;
   }
-  .sheet::after{
-    content:"";
-    position:absolute;
-    top:14px; right:26px;
-    width:34px; height:34px;
-    background: repeating-radial-gradient(circle at center, #cfc4a3 0 2px, transparent 2px 100%);
-    opacity:.5;
-    border-radius:50%;
+  .topbar .sub{ font-size: 11.5px; opacity:.75; margin-top:2px; }
+
+  .layout{
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    gap: 28px;
+    max-width: 1280px;
+    margin: 28px auto;
+    padding: 0 24px 60px;
+    align-items:start;
+  }
+  @media (max-width: 980px){
+    .layout{ grid-template-columns: 1fr; }
   }
 
-  header{ margin-bottom: 30px; }
-  .eyebrow{
-    font-family:'Courier Prime', monospace;
-    font-size: 12px;
-    letter-spacing: 0.22em;
-    color: var(--red);
-    text-transform: uppercase;
-  }
-  h1{
-    font-family:'Shippori Mincho', serif;
-    font-weight: 800;
-    font-size: clamp(26px, 4.4vw, 34px);
-    margin: 6px 0 8px;
-    line-height:1.3;
-  }
-  header p{
-    margin:0;
-    color: var(--ink-soft);
-    font-size: 14px;
-    line-height:1.7;
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(20,25,40,0.04);
   }
 
-  fieldset{ border:none; margin:0 0 22px; padding:0; }
-  .field{ margin-bottom: 16px; }
-  .field label{
-    display:block;
-    font-size: 12.5px;
-    font-weight:700;
-    color: var(--red-dark);
-    margin-bottom: 6px;
+  .control-panel{ position: sticky; top: 20px; padding: 24px; }
+  .section-title{
+    font-size: 11.5px; font-weight:700; letter-spacing:0.08em;
+    color: var(--primary); text-transform:uppercase;
+    margin: 22px 0 12px;
+    display:flex; align-items:center; gap:8px;
   }
-  .field label .req{ font-weight:400; color: var(--ink-soft); margin-left: 4px; }
-  .field input[type=number],
-  .field select,
-  .field textarea{
-    width:100%;
-    font-family:'Zen Kaku Gothic New', sans-serif;
-    font-size: 15px;
-    color: var(--ink);
-    background: transparent;
-    border: none;
-    border-bottom: 1.5px solid var(--line);
-    padding: 8px 2px;
-    outline: none;
-    transition: border-color .15s ease;
+  .section-title:first-child{ margin-top:0; }
+  .section-title::before{
+    content:""; width:3px; height:12px; background: var(--accent); border-radius:2px;
   }
-  .field textarea{ resize: vertical; min-height: 54px; line-height:1.6; }
-  .field input:focus, .field select:focus, .field textarea:focus{ border-bottom-color: var(--red); }
-  .row{ display:flex; gap: 20px; flex-wrap: wrap; }
-  .row .field{ flex:1 1 160px; }
 
-  .stamp-btn{
-    font-family:'Shippori Mincho', serif;
-    font-weight:700;
-    font-size:17px;
-    letter-spacing: 0.08em;
-    color: #fdf6ee;
-    background: var(--red);
-    border: none;
-    border-radius: 999px;
-    padding: 14px 34px;
-    cursor:pointer;
-    box-shadow: 0 6px 0 var(--red-dark), 0 10px 18px rgba(178,58,46,0.35);
-    transform: rotate(-2deg);
-    transition: transform .12s ease, box-shadow .12s ease;
+  .field{ margin-bottom: 14px; }
+  .field label{ display:block; font-size:12.5px; font-weight:600; color: var(--ink-soft); margin-bottom:5px; }
+  .field input[type=text], .field input[type=number], .field select, .field textarea{
+    width:100%; font-family:'Noto Sans JP', sans-serif; font-size:14px; color: var(--ink);
+    background: #f7f8fb; border: 1px solid var(--panel-border); border-radius: 8px;
+    padding: 9px 11px; outline:none; transition: border-color .12s ease, background .12s ease;
   }
-  .stamp-btn:hover{ transform: rotate(-2deg) translateY(-1px); }
-  .stamp-btn:active{
-    transform: rotate(-2deg) translateY(4px);
-    box-shadow: 0 2px 0 var(--red-dark), 0 4px 8px rgba(178,58,46,0.3);
+  .field textarea{ resize:vertical; min-height:64px; line-height:1.6; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    border-color: var(--primary); background:#fff;
   }
-  .stamp-btn:disabled{ opacity:.55; cursor: default; transform:none; box-shadow: 0 4px 0 var(--red-dark); }
-  .btn-wrap{ display:flex; align-items:center; gap:16px; margin: 6px 0 8px; flex-wrap:wrap; }
-  .status-msg{ font-size: 13px; color: var(--ink-soft); }
-  .status-msg.error{ color: var(--red-dark); font-weight:700; }
+  .row2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
-  .loading-line{ display:none; align-items:center; gap:10px; font-family:'Courier Prime', monospace; font-size: 13px; color: var(--ink-soft); }
+  .checkline{
+    display:flex; align-items:center; gap:8px; font-size:13px; color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .generate-btn{
+    width:100%; margin-top: 18px;
+    font-family:'Noto Sans JP', sans-serif; font-weight:700; font-size:14.5px;
+    color:#fff; background: var(--primary); border:none; border-radius: 10px;
+    padding: 13px; cursor:pointer;
+    transition: background .12s ease, transform .06s ease;
+  }
+  .generate-btn:hover{ background: var(--primary-dark); }
+  .generate-btn:active{ transform: translateY(1px); }
+  .generate-btn:disabled{ opacity:.55; cursor:default; }
+
+  .status-msg{ font-size:12.5px; color: var(--ink-soft); margin-top: 10px; min-height: 16px; }
+  .status-msg.error{ color: var(--accent); font-weight:700; }
+
+  .loading-line{ display:none; align-items:center; gap:8px; font-size:12.5px; color: var(--ink-soft); margin-top:10px; }
   .loading-line.active{ display:flex; }
-  .pencil-track{ position:relative; width:120px; height:2px; background: var(--line); overflow:hidden; border-radius:2px; }
+  .pencil-track{ position:relative; width:80px; height:2px; background: var(--rule); overflow:hidden; border-radius:2px; }
   .pencil-track::after{
     content:""; position:absolute; top:0; left:-40%; width:40%; height:100%;
-    background: var(--red); animation: scribble 1.1s ease-in-out infinite;
+    background: var(--accent); animation: scribble 1.1s ease-in-out infinite;
   }
   @keyframes scribble{ 0%{ left:-40%; } 50%{ left:100%; } 100%{ left:-40%; } }
 
-  .results{ margin-top: 30px; display:flex; flex-direction:column; gap: 26px; }
-  .qcard{ position:relative; border-top: 1px solid var(--line); padding-top: 20px; }
-  .qhead{ display:flex; gap: 14px; align-items:flex-start; }
-  .qnum{
-    flex: none; width: 34px; height:34px; border-radius: 50%;
-    border: 2px solid var(--red); color: var(--red-dark);
-    font-family:'Courier Prime', monospace; font-weight:700; font-size: 14px;
-    display:flex; align-items:center; justify-content:center;
-    transform: rotate(-4deg);
+  .font-note{
+    margin-top: 20px; font-size: 11px; line-height:1.7; color: var(--ink-soft);
+    background: var(--primary-soft); border-radius: 8px; padding: 10px 12px;
   }
-  .qbody{ flex:1; }
-  .qtype{
-    display:inline-block; font-family:'Courier Prime', monospace; font-size: 10.5px;
-    letter-spacing:0.08em; color: var(--ink-soft); border: 1px solid var(--line);
-    border-radius: 3px; padding: 1px 6px; margin-bottom: 6px;
-  }
-  .qtext{ font-size: 16px; line-height:1.75; margin: 0 0 12px; }
-  .options{ list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:8px; }
-  .options li{ display:flex; align-items:baseline; gap:10px; font-size: 14.5px; line-height:1.6; padding: 2px 0; }
-  .options li .bullet{ flex:none; font-family:'Courier Prime', monospace; color: var(--ink-soft); font-size:13px; }
-  .options li.correct{ color: var(--red-dark); font-weight:700; }
-  .options li.correct .bullet{ color: var(--red-dark); }
 
-  .reveal-btn{
-    font-family:'Zen Kaku Gothic New', sans-serif; font-size: 13px; font-weight:700;
-    color: var(--red-dark); background: transparent; border: 1px solid var(--red);
-    border-radius: 999px; padding: 6px 16px; cursor:pointer;
+  /* --- Preview column --- */
+  .preview-toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 20px; margin-bottom: 18px;
+  }
+  .preview-toolbar .label{ font-size:13px; color: var(--ink-soft); }
+  .print-btn{
+    font-family:'Noto Sans JP', sans-serif; font-weight:700; font-size:13.5px;
+    color: var(--primary); background:#fff; border: 1.5px solid var(--primary);
+    border-radius: 999px; padding: 9px 20px; cursor:pointer;
     transition: background .12s ease, color .12s ease;
   }
-  .reveal-btn:hover{ background: var(--red); color: #fff; }
+  .print-btn:hover{ background: var(--primary); color:#fff; }
+  .print-btn:disabled{ opacity:.4; cursor:default; }
 
-  .answer-block{
-    display:none; position:relative; margin-top: 16px; padding: 16px 18px 16px 20px;
-    background: rgba(178,58,46,0.05); border-left: 3px solid var(--red); border-radius: 0 6px 6px 0;
+  .preview-stage{
+    background: #dde1e9;
+    border-radius: 14px;
+    padding: 32px;
+    display:flex; justify-content:center;
   }
-  .answer-block.show{ display:block; animation: ink-in .28s ease; }
-  @keyframes ink-in{ from{ opacity:0; transform: translateY(-4px); } to{ opacity:1; transform: translateY(0); } }
-  .stamp{
-    position:absolute; top:-14px; right:10px; width:64px; height:64px;
-    display:flex; align-items:center; justify-content:center;
-    border: 3px solid var(--red); border-radius:50%; color: var(--red);
-    font-family:'Shippori Mincho', serif; font-weight:800; font-size: 13px; letter-spacing:0.05em;
-    transform: rotate(-14deg) scale(0); background: rgba(247,242,230,0.85);
-    animation: stamp-in .32s cubic-bezier(.36,1.4,.5,1) forwards; animation-delay: .05s;
-  }
-  @keyframes stamp-in{ to{ transform: rotate(-14deg) scale(1); } }
-  .answer-label{ font-family:'Courier Prime', monospace; font-size: 11px; letter-spacing:0.1em; color: var(--red-dark); margin: 0 0 4px; }
-  .answer-text{ font-size: 15px; font-weight:700; margin: 0 0 10px; line-height:1.6; }
-  .explanation{ font-size: 13.5px; color: var(--ink-soft); line-height:1.75; margin:0; }
 
-  .empty-note{ margin-top: 30px; padding: 22px 4px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 13.5px; line-height:1.8; }
-  footer{ margin-top: 40px; padding-top: 16px; border-top: 1px dashed var(--line); font-size: 11.5px; color: var(--ink-soft); font-family:'Courier Prime', monospace; }
-
-  @media (max-width: 520px){
-    .sheet{ padding: 36px 20px 44px 46px; }
-    .sheet::before{ left: 26px; }
+  .paper-page{
+    width: 210mm;
+    min-height: 297mm;
+    max-width: 100%;
+    background:#fff;
+    box-shadow: 0 8px 30px rgba(20,25,40,0.18);
+    padding: 16mm 16mm 18mm;
+    font-family:'Kaisei Decol', serif;
+    color:#1a1a1a;
   }
+
+  .paper-header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin-bottom: 16px;
+  }
+  .paper-header .school{ font-size: 11px; color:#444; margin:0 0 6px; }
+  .paper-header .subject-title{ font-size: 24px; font-weight:700; margin:0; letter-spacing:0.06em; }
+  .paper-header .meta{ font-size: 10.5px; color:#555; margin-top:6px; }
+  .score-box{
+    border: 1.5px solid #1a1a1a; border-radius: 4px;
+    padding: 8px 14px; text-align:center; min-width: 120px;
+  }
+  .score-box .cap{ font-size:10px; color:#555; }
+  .score-box .val{ font-size:18px; font-weight:700; margin-top:2px; }
+
+  .id-row{
+    display:flex; gap: 18px; font-size: 12px; color:#333; margin-bottom: 18px;
+  }
+  .id-row .id-field{ display:flex; align-items:baseline; gap:6px; }
+  .id-row .id-field .u-line{ display:inline-block; width: 90px; border-bottom: 1px solid #888; height: 14px; }
+  .id-row .id-field.name .u-line{ width: 140px; }
+
+  .instructions{
+    font-size: 10.5px; color:#555; border: 1px dashed #bbb; border-radius:4px;
+    padding: 6px 10px; margin-bottom: 20px; line-height:1.7;
+  }
+
+  .q-block{ margin-bottom: 20px; page-break-inside: avoid; }
+  .q-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+  .q-num{ font-weight:700; font-size:14.5px; flex:none; }
+  .q-points{ font-size:11px; color:#666; flex:none; }
+  .q-text{ font-size: 14.5px; line-height:1.85; flex:1; }
+
+  .mc-options{
+    list-style:none; margin: 8px 0 4px 26px; padding:0;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .mc-options li{ font-size:13.5px; line-height:1.7; }
+  .mc-options li .kana{ font-weight:700; margin-right:8px; }
+  .mc-answer-blank{
+    margin: 6px 0 0 26px; font-size:12.5px; color:#333;
+  }
+  .mc-answer-blank .box{
+    display:inline-block; width:26px; height:20px; border:1.3px solid #333;
+    border-radius:3px; vertical-align:middle; margin-left:6px;
+  }
+
+  .desc-lines{ margin: 8px 0 0 26px; }
+  .desc-lines .l{ border-bottom: 1px solid #999; height: 22px; }
+
+  .answer-sheet{
+    margin-top: 26px; page-break-before: always;
+  }
+  .answer-sheet h2{
+    font-size:16px; border-bottom:2px solid #1a1a1a; padding-bottom:6px; margin-bottom:14px;
+  }
+  .a-row{ display:flex; gap:12px; font-size:13px; margin-bottom:10px; align-items:baseline; }
+  .a-row .a-num{ font-weight:700; flex:none; width:32px; }
+  .a-row .a-ans{ font-weight:700; }
+  .a-row .a-exp{ color:#555; font-size:12px; margin-top:2px; }
+
+  .empty-preview{
+    padding: 60px 20px; text-align:center; color: var(--ink-soft); font-size:13.5px; line-height:1.9;
+  }
+
+  @media print{
+    body *{ visibility:hidden; }
+    .paper-page, .paper-page *{ visibility:visible; }
+    .paper-page{ position:absolute; top:0; left:0; box-shadow:none; padding:14mm 14mm 16mm; width:auto; min-height:0; }
+    .preview-stage{ padding:0; background:none; }
+  }
+  @page{ size: A4; margin: 0; }
 </style>
 </head>
 <body>
 
-<div class="sheet">
-  <header>
-    <div class="eyebrow">Gemini API / サーバー側でキーを保護</div>
-    <h1>AI 問題演習ノート</h1>
-    <p>テーマと形式を書き込むと、Gemini が問題と解答・解説を作成します。APIキーはサーバー側（Vercelの環境変数）だけで使われ、この画面には一切表示されません。</p>
-  </header>
+<div class="topbar">
+  <div>
+    <h1>テスト用紙メーカー</h1>
+    <div class="sub">Gemini APIで学校テストの問題を作成し、そのままPDF/印刷できます</div>
+  </div>
+</div>
 
-  <form id="genForm">
-    <fieldset>
-      <div class="field">
-        <label for="topic">出題テーマ <span class="req">必須</span></label>
-        <textarea id="topic" placeholder="例：中学2年 理科「電流とオームの法則」、英検準2級レベルの語彙、Reactのフック（useState / useEffect）など"></textarea>
-      </div>
+<div class="layout">
 
-      <div class="row">
+  <!-- 左: 作成フォーム -->
+  <div class="panel control-panel">
+    <form id="genForm">
+
+      <div class="section-title">出題内容</div>
+      <div class="row2">
         <div class="field">
-          <label for="format">問題形式</label>
+          <label for="subject">教科</label>
+          <input type="text" id="subject" placeholder="例：理科" value="理科">
+        </div>
+        <div class="field">
+          <label for="grade">対象学年</label>
+          <input type="text" id="grade" placeholder="例：中学2年" value="中学2年">
+        </div>
+      </div>
+      <div class="field">
+        <label for="topic">出題範囲・テーマ <span style="color:var(--accent)">必須</span></label>
+        <textarea id="topic" placeholder="例：電流とオームの法則、光合成と呼吸、江戸時代の産業と交通 など"></textarea>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label for="format">出題形式</label>
           <select id="format">
-            <option value="mixed">選択式・記述式を混在</option>
-            <option value="mc">選択式（4択）のみ</option>
+            <option value="mixed">選択式・記述式混在</option>
+            <option value="mc">選択式のみ</option>
             <option value="desc">記述式のみ</option>
           </select>
         </div>
@@ -243,158 +274,197 @@
         </div>
         <div class="field">
           <label for="count">問題数</label>
-          <input type="number" id="count" value="5" min="1" max="15">
+          <input type="number" id="count" value="8" min="1" max="20">
         </div>
       </div>
-    </fieldset>
-
-    <div class="btn-wrap">
-      <button type="submit" class="stamp-btn" id="genBtn">問題を作成する</button>
-      <div class="loading-line" id="loadingLine">
-        <span class="pencil-track"></span>
-        <span>生成中…</span>
+      <div class="field">
+        <label for="totalPoints">配点合計</label>
+        <input type="number" id="totalPoints" value="100" min="1" max="200">
       </div>
-      <span class="status-msg" id="statusMsg"></span>
-    </div>
-  </form>
 
-  <div class="results" id="results"></div>
+      <div class="section-title">用紙のヘッダー情報</div>
+      <div class="row2">
+        <div class="field">
+          <label for="schoolName">学校名(任意)</label>
+          <input type="text" id="schoolName" placeholder="例：〇〇中学校">
+        </div>
+        <div class="field">
+          <label for="examDate">実施日(任意)</label>
+          <input type="text" id="examDate" placeholder="例：2026年9月10日">
+        </div>
+      </div>
+      <label class="checkline"><input type="checkbox" id="includeAnswerSheet" checked> 最後に解答・採点基準ページを付ける（教員用）</label>
 
-  <div class="empty-note" id="emptyNote">
-    まだ問題は作成されていません。テーマを書き込んで「問題を作成する」を押してください。
+      <button type="submit" class="generate-btn" id="genBtn">テスト用紙を作成する</button>
+      <div class="loading-line" id="loadingLine">
+        <span class="pencil-track"></span><span>作成中…</span>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+
+      <div class="font-note">
+        ※ 本物の「教科書体」（UD デジタル教科書体など）は商用フォントのため組み込めません。ここでは教科書体を意識してデザインされた無料フォント「Kaisei Decol」を使用しています。
+      </div>
+    </form>
   </div>
 
-  <footer>note: Gemini API により生成 — 内容の正確性は必ず確認してください</footer>
+  <!-- 右: プレビュー -->
+  <div>
+    <div class="panel preview-toolbar">
+      <span class="label" id="previewLabel">プレビュー（作成するとここに表示されます）</span>
+      <button class="print-btn" id="printBtn" disabled>PDFとして保存 / 印刷</button>
+    </div>
+
+    <div class="preview-stage">
+      <div id="paperArea">
+        <div class="empty-preview panel" style="width:210mm;max-width:100%;">
+          左のフォームに出題範囲を入力して「テスト用紙を作成する」を押すと、<br>
+          ここにA4サイズの試験用紙プレビューが表示されます。
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 (function(){
   const form = document.getElementById('genForm');
-  const topicInput = document.getElementById('topic');
-  const formatSelect = document.getElementById('format');
-  const difficultySelect = document.getElementById('difficulty');
-  const countInput = document.getElementById('count');
   const genBtn = document.getElementById('genBtn');
   const loadingLine = document.getElementById('loadingLine');
   const statusMsg = document.getElementById('statusMsg');
-  const resultsEl = document.getElementById('results');
-  const emptyNote = document.getElementById('emptyNote');
+  const paperArea = document.getElementById('paperArea');
+  const printBtn = document.getElementById('printBtn');
+  const previewLabel = document.getElementById('previewLabel');
 
-  function setLoading(isLoading) {
-    genBtn.disabled = isLoading;
-    loadingLine.classList.toggle('active', isLoading);
+  function escapeHtml(str){
+    return String(str == null ? '' : str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  const KANA = ['ア','イ','ウ','エ','オ','カ'];
 
-  function showStatus(text, isError) {
+  function setLoading(v){
+    genBtn.disabled = v;
+    loadingLine.classList.toggle('active', v);
+  }
+  function showStatus(text, isError){
     statusMsg.textContent = text || '';
     statusMsg.classList.toggle('error', !!isError);
   }
 
-  function letterFor(i) {
-    return ['A', 'B', 'C', 'D', 'E', 'F'][i] || (i + 1);
-  }
+  function renderPaper(questions, opts){
+    const subject = opts.subject || 'テスト';
+    const grade = opts.grade || '';
+    const school = opts.schoolName || '';
+    const date = opts.examDate || '';
+    const totalPoints = opts.totalPoints;
+    const includeAnswers = opts.includeAnswerSheet;
 
-  function escapeHtml(str) {
-    return String(str == null ? '' : str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  function renderResults(items) {
-    resultsEl.innerHTML = '';
-    if (!items || !items.length) {
-      emptyNote.style.display = 'block';
-      emptyNote.textContent = '問題が生成されませんでした。テーマを変えて再度お試しください。';
-      return;
-    }
-    emptyNote.style.display = 'none';
-
-    items.forEach((item, idx) => {
-      const card = document.createElement('div');
-      card.className = 'qcard';
-
-      const isMC = item.type === 'multiple_choice' && Array.isArray(item.options) && item.options.length > 0;
-
-      let optionsHtml = '';
+    let qHtml = '';
+    questions.forEach((q, i) => {
+      const num = i + 1;
+      const isMC = q.type === 'multiple_choice' && Array.isArray(q.options) && q.options.length > 0;
+      qHtml += `<div class="q-block">
+        <div class="q-head">
+          <span class="q-num">問${num}</span>
+          <span class="q-points">(${q.points || '-'}点)</span>
+          <span class="q-text">${escapeHtml(q.question)}</span>
+        </div>`;
       if (isMC) {
-        optionsHtml = '<ul class="options">' + item.options.map((opt, i) => {
-          const isCorrect = String(opt).trim() === String(item.answer).trim();
-          return `<li class="opt-item" data-correct="${isCorrect}"><span class="bullet">${letterFor(i)}</span><span>${escapeHtml(opt)}</span></li>`;
-        }).join('') + '</ul>';
+        qHtml += '<ul class="mc-options">' + q.options.map((opt, oi) =>
+          `<li><span class="kana">${KANA[oi] || (oi+1)}</span>${escapeHtml(opt)}</li>`
+        ).join('') + '</ul>';
+        qHtml += `<div class="mc-answer-blank">答え<span class="box"></span></div>`;
+      } else {
+        const lines = q.answerLength === 'long' ? 4 : 2;
+        qHtml += '<div class="desc-lines">' + Array.from({length: lines}).map(() => '<div class="l"></div>').join('') + '</div>';
       }
+      qHtml += `</div>`;
+    });
 
-      card.innerHTML = `
-        <div class="qhead">
-          <div class="qnum">${idx + 1}</div>
-          <div class="qbody">
-            <span class="qtype">${isMC ? '選択式' : '記述式'}</span>
-            <p class="qtext">${escapeHtml(item.question)}</p>
-            ${optionsHtml}
-            <button type="button" class="reveal-btn">解答を見る</button>
-            <div class="answer-block">
-              <div class="stamp">正解</div>
-              <p class="answer-label">ANSWER</p>
-              <p class="answer-text">${escapeHtml(item.answer)}</p>
-              <p class="explanation">${escapeHtml(item.explanation || '')}</p>
+    let answerHtml = '';
+    if (includeAnswers) {
+      answerHtml = `<div class="answer-sheet"><h2>解答・採点基準（教員用）</h2>` +
+        questions.map((q, i) => `
+          <div class="a-row">
+            <span class="a-num">問${i+1}</span>
+            <div>
+              <div class="a-ans">${escapeHtml(q.answer)}</div>
+              <div class="a-exp">${escapeHtml(q.explanation || '')}</div>
             </div>
           </div>
+        `).join('') + `</div>`;
+    }
+
+    return `
+      <div class="paper-page">
+        <div class="paper-header">
+          <div>
+            ${school ? `<p class="school">${escapeHtml(school)}</p>` : ''}
+            <p class="subject-title">${escapeHtml(subject)}　テスト</p>
+            <p class="meta">${escapeHtml(grade)}${grade && date ? '　' : ''}${escapeHtml(date)}</p>
+          </div>
+          <div class="score-box">
+            <div class="cap">得点</div>
+            <div class="val">　　　／ ${totalPoints}点</div>
+          </div>
         </div>
-      `;
-
-      const revealBtn = card.querySelector('.reveal-btn');
-      const answerBlock = card.querySelector('.answer-block');
-      revealBtn.addEventListener('click', () => {
-        const willShow = !answerBlock.classList.contains('show');
-        answerBlock.classList.toggle('show', willShow);
-        revealBtn.textContent = willShow ? '解答をかくす' : '解答を見る';
-        if (willShow && isMC) {
-          card.querySelectorAll('.opt-item').forEach(li => {
-            if (li.getAttribute('data-correct') === 'true') li.classList.add('correct');
-          });
-        }
-      });
-
-      resultsEl.appendChild(card);
-    });
+        <div class="id-row">
+          <div class="id-field"><span>組</span><span class="u-line"></span></div>
+          <div class="id-field"><span>番</span><span class="u-line"></span></div>
+          <div class="id-field name"><span>氏名</span><span class="u-line"></span></div>
+        </div>
+        <div class="instructions">・字は丁寧に、はっきりと書きましょう。　・見直しの時間を大切に。</div>
+        ${qHtml}
+        ${answerHtml}
+      </div>
+    `;
   }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     showStatus('');
 
-    const topic = topicInput.value.trim();
-    const format = formatSelect.value;
-    const difficulty = difficultySelect.value;
-    const count = Math.min(15, Math.max(1, parseInt(countInput.value, 10) || 5));
+    const subject = document.getElementById('subject').value.trim();
+    const grade = document.getElementById('grade').value.trim();
+    const topic = document.getElementById('topic').value.trim();
+    const format = document.getElementById('format').value;
+    const difficulty = document.getElementById('difficulty').value;
+    const count = Math.min(20, Math.max(1, parseInt(document.getElementById('count').value, 10) || 8));
+    const totalPoints = Math.min(200, Math.max(1, parseInt(document.getElementById('totalPoints').value, 10) || 100));
+    const schoolName = document.getElementById('schoolName').value.trim();
+    const examDate = document.getElementById('examDate').value.trim();
+    const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
 
-    if (!topic) { showStatus('出題テーマを入力してください。', true); topicInput.focus(); return; }
+    if (!topic) {
+      showStatus('出題範囲・テーマを入力してください。', true);
+      document.getElementById('topic').focus();
+      return;
+    }
 
     setLoading(true);
-
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, format, difficulty, count })
+        body: JSON.stringify({ subject, grade, topic, format, difficulty, count, totalPoints })
       });
-
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `サーバーエラー (${res.status})`);
 
-      if (!res.ok) {
-        throw new Error(data.error || `サーバーエラー (${res.status})`);
-      }
-
-      renderResults(data.items);
-      showStatus(`${data.items.length}問 作成しました。`);
+      const questions = data.questions || [];
+      paperArea.innerHTML = renderPaper(questions, { subject, grade, schoolName, examDate, totalPoints, includeAnswerSheet });
+      printBtn.disabled = false;
+      previewLabel.textContent = `プレビュー（全${questions.length}問・${totalPoints}点満点）`;
+      showStatus(`${questions.length}問 作成しました。`);
     } catch (err) {
       console.error(err);
-      showStatus(err.message || '問題の作成に失敗しました。', true);
+      showStatus(err.message || 'テスト用紙の作成に失敗しました。', true);
     } finally {
       setLoading(false);
     }
   });
+
+  printBtn.addEventListener('click', () => window.print());
 })();
 </script>
 
