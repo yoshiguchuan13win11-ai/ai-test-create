@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 <style>
   :root{
     --bg-0: #0a0b10;
@@ -161,6 +162,7 @@
     padding: 15px 20px; margin-bottom: 18px;
   }
   .preview-toolbar .label{ font-family:'JetBrains Mono', monospace; font-size:11.5px; color: var(--ink-soft); }
+  .toolbar-btns{ display:flex; gap:10px; }
   .print-btn{
     font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13.5px;
     color: var(--ink); background: transparent; border: 1.5px solid var(--accent);
@@ -169,6 +171,15 @@
   }
   .print-btn:hover{ background: rgba(124,140,255,0.12); box-shadow: 0 0 0 4px rgba(124,140,255,0.08); }
   .print-btn:disabled{ opacity:.35; cursor:default; box-shadow:none; }
+  .docx-btn{
+    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13.5px;
+    color:#0a0b10; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border:none; border-radius: 999px; padding: 9px 20px; cursor:pointer;
+    box-shadow: 0 6px 18px var(--accent-glow);
+    transition: transform .08s ease, box-shadow .12s ease;
+  }
+  .docx-btn:hover{ transform: translateY(-1px); }
+  .docx-btn:disabled{ opacity:.3; cursor:default; transform:none; box-shadow:none; }
 
   .preview-stage{
     background: radial-gradient(600px 300px at 50% -10%, rgba(124,140,255,0.10), transparent 60%), #05060a;
@@ -366,7 +377,10 @@
   <div>
     <div class="panel preview-toolbar">
       <span class="label" id="previewLabel">PREVIEW — 作成するとここに表示されます</span>
-      <button class="print-btn" id="printBtn" disabled>PDFとして保存 / 印刷</button>
+      <div class="toolbar-btns">
+        <button class="docx-btn" id="docxBtn" disabled>Word(.docx)でダウンロード</button>
+        <button class="print-btn" id="printBtn" disabled>PDFとして保存 / 印刷</button>
+      </div>
     </div>
 
     <div class="preview-stage">
@@ -389,7 +403,10 @@
   const statusMsg = document.getElementById('statusMsg');
   const paperArea = document.getElementById('paperArea');
   const printBtn = document.getElementById('printBtn');
+  const docxBtn = document.getElementById('docxBtn');
   const previewLabel = document.getElementById('previewLabel');
+  let lastQuestions = null;
+  let lastOpts = null;
 
   // 万一Gemini側の指示が漏れてLaTeX記法が混じった場合の保険的な変換
   function cleanMath(str){
@@ -529,8 +546,12 @@
       if (!res.ok) throw new Error(data.error || `サーバーエラー (${res.status})`);
 
       const questions = data.questions || [];
-      paperArea.innerHTML = renderPaper(questions, { subject, grade, schoolName, examDate, totalPoints, includeAnswerSheet });
+      const opts = { subject, grade, schoolName, examDate, totalPoints, includeAnswerSheet };
+      paperArea.innerHTML = renderPaper(questions, opts);
+      lastQuestions = questions;
+      lastOpts = opts;
       printBtn.disabled = false;
+      docxBtn.disabled = false;
       previewLabel.textContent = `PREVIEW — 全${questions.length}問・${totalPoints}点満点`;
       showStatus(`${questions.length}問 作成しました。`);
     } catch (err) {
@@ -538,6 +559,127 @@
       showStatus(err.message || 'テスト用紙の作成に失敗しました。', true);
     } finally {
       setLoading(false);
+    }
+  });
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function buildDocxBlob(questions, opts){
+    const { Document, Packer, Paragraph, TextRun, BorderStyle } = window.docx;
+    const KANA = ['ア','イ','ウ','エ','オ','カ'];
+    const children = [];
+
+    if (opts.schoolName) {
+      children.push(new Paragraph({ children: [ new TextRun({ text: opts.schoolName, size: 18, color: '444444' }) ] }));
+    }
+    children.push(new Paragraph({
+      children: [ new TextRun({ text: `${opts.subject || 'テスト'}　テスト`, bold: true, size: 36 }) ],
+      spacing: { after: 80 }
+    }));
+    const metaText = [opts.grade, opts.examDate].filter(Boolean).join('　');
+    if (metaText) {
+      children.push(new Paragraph({ children: [ new TextRun({ text: metaText, size: 18, color: '555555' }) ], spacing: { after: 200 } }));
+    }
+    children.push(new Paragraph({
+      children: [ new TextRun({ text: `得点：　　　　／ ${opts.totalPoints}点`, bold: true, size: 22 }) ],
+      spacing: { after: 200 }
+    }));
+    children.push(new Paragraph({
+      children: [ new TextRun({ text: '組（　　） 番（　　） 氏名（　　　　　　　　　　）', size: 20 }) ],
+      spacing: { after: 120 }
+    }));
+    children.push(new Paragraph({
+      children: [ new TextRun({ text: '・字は丁寧に、はっきりと書きましょう。　・見直しの時間を大切に。', size: 16, color: '555555' }) ],
+      spacing: { after: 300 }
+    }));
+
+    questions.forEach((q, i) => {
+      const isMC = q.type === 'multiple_choice' && Array.isArray(q.options) && q.options.length > 0;
+      children.push(new Paragraph({
+        children: [
+          new TextRun({ text: `問${i + 1}　`, bold: true, size: 24 }),
+          new TextRun({ text: `(${q.points || '-'}点)　`, size: 18, color: '666666' }),
+          new TextRun({ text: cleanMath(q.question), size: 24 })
+        ],
+        spacing: { before: 200, after: 100 }
+      }));
+      if (isMC) {
+        q.options.forEach((opt, oi) => {
+          children.push(new Paragraph({
+            children: [ new TextRun({ text: `　${KANA[oi] || (oi + 1)}　${cleanMath(opt)}`, size: 22 }) ],
+            spacing: { after: 60 }
+          }));
+        });
+        children.push(new Paragraph({
+          children: [ new TextRun({ text: '　答え（　　）', size: 20 }) ],
+          spacing: { after: 120 }
+        }));
+      } else {
+        const lineCount = q.answerLength === 'long' ? 4 : 2;
+        for (let l = 0; l < lineCount; l++) {
+          children.push(new Paragraph({
+            border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '999999' } },
+            spacing: { after: 160 },
+            children: [ new TextRun({ text: ' ' }) ]
+          }));
+        }
+      }
+    });
+
+    if (opts.includeAnswerSheet) {
+      children.push(new Paragraph({ children: [], pageBreakBefore: true }));
+      children.push(new Paragraph({
+        children: [ new TextRun({ text: '解答・採点基準（教員用）', bold: true, size: 28 }) ],
+        spacing: { after: 200 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000' } }
+      }));
+      questions.forEach((q, i) => {
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: `問${i + 1}　`, bold: true, size: 22 }),
+            new TextRun({ text: cleanMath(q.answer), bold: true, size: 22 })
+          ],
+          spacing: { before: 120, after: 40 }
+        }));
+        if (q.explanation) {
+          children.push(new Paragraph({
+            children: [ new TextRun({ text: cleanMath(q.explanation), size: 18, color: '555555' }) ],
+            spacing: { after: 120 }
+          }));
+        }
+      });
+    }
+
+    const doc = new Document({
+      sections: [{ properties: {}, children }],
+      styles: { default: { document: { run: { font: 'Kaisei Decol' } } } }
+    });
+
+    return await Packer.toBlob(doc);
+  }
+
+  docxBtn.addEventListener('click', async () => {
+    if (!window.docx) {
+      showStatus('Wordファイル生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true);
+      return;
+    }
+    if (!lastQuestions) return;
+    docxBtn.disabled = true;
+    try {
+      const blob = await buildDocxBlob(lastQuestions, lastOpts);
+      const fname = `${(lastOpts.subject || 'テスト')}_${(lastOpts.grade || '')}.docx`.replace(/\s+/g, '');
+      downloadBlob(blob, fname);
+    } catch (err) {
+      console.error(err);
+      showStatus('Wordファイルの作成に失敗しました。', true);
+    } finally {
+      docxBtn.disabled = false;
     }
   });
 
