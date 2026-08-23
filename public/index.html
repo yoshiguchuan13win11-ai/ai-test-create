@@ -6,45 +6,60 @@
 <title>テスト用紙メーカー — Gemini製 学校テスト作成ツール</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #eef0f4;
-    --panel: #ffffff;
-    --panel-border: #e1e4ec;
-    --ink: #1c2333;
-    --ink-soft: #6b7284;
-    --primary: #1d3557;
-    --primary-dark: #13253f;
-    --primary-soft: rgba(29,53,87,0.07);
-    --accent: #c0392b;
-    --rule: #d3d7e0;
+    --bg: #0a0b0f;
+    --bg-glow: radial-gradient(circle at 15% 0%, rgba(124,92,255,0.16), transparent 45%),
+               radial-gradient(circle at 85% 20%, rgba(34,211,238,0.10), transparent 40%);
+    --panel: #14151c;
+    --panel-alt: #191b24;
+    --panel-border: #262838;
+    --ink: #eef0f7;
+    --ink-soft: #9297ab;
+    --ink-faint: #61667c;
+    --primary: #7c5cff;
+    --primary-bright: #9b82ff;
+    --cyan: #22d3ee;
+    --accent: #ff6b81;
+    --field-bg: #101119;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
-    background: var(--bg);
+    background: var(--bg-glow), var(--bg);
+    background-attachment: fixed;
     color: var(--ink);
-    font-family:'Noto Sans JP', sans-serif;
+    font-family:'Plus Jakarta Sans', sans-serif;
     min-height:100vh;
   }
 
   .topbar{
     display:flex; align-items:center; justify-content:space-between;
-    padding: 18px 28px;
-    background: var(--primary);
-    color:#fff;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--panel-border);
+    background: rgba(20,21,28,0.6);
+    backdrop-filter: blur(12px);
   }
-  .topbar h1{
-    font-size: 16px; font-weight:700; margin:0; letter-spacing:0.02em;
+  .topbar .brand{ display:flex; align-items:center; gap:10px; }
+  .topbar .dot{
+    width:9px; height:9px; border-radius:50%;
+    background: linear-gradient(135deg, var(--primary), var(--cyan));
+    box-shadow: 0 0 12px rgba(124,92,255,0.8);
   }
-  .topbar .sub{ font-size: 11.5px; opacity:.75; margin-top:2px; }
+  .topbar h1{ font-size: 15.5px; font-weight:700; margin:0; letter-spacing:0.01em; }
+  .topbar .sub{ font-size: 11.5px; color: var(--ink-faint); margin-top:2px; }
+  .topbar .badge{
+    font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:0.05em;
+    color: var(--cyan); border:1px solid rgba(34,211,238,0.35); border-radius:999px;
+    padding: 4px 10px; background: rgba(34,211,238,0.06);
+  }
 
   .layout{
     display:grid;
-    grid-template-columns: 380px 1fr;
-    gap: 28px;
-    max-width: 1280px;
+    grid-template-columns: 400px 1fr;
+    gap: 26px;
+    max-width: 1320px;
     margin: 28px auto;
     padding: 0 24px 60px;
     align-items:start;
@@ -54,89 +69,110 @@
   }
 
   .panel{
-    background: var(--panel);
+    background: linear-gradient(180deg, var(--panel), var(--panel-alt));
     border: 1px solid var(--panel-border);
-    border-radius: 14px;
-    box-shadow: 0 1px 2px rgba(20,25,40,0.04);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
   }
 
-  .control-panel{ position: sticky; top: 20px; padding: 24px; }
+  .control-panel{ position: sticky; top: 20px; padding: 26px; }
   .section-title{
-    font-size: 11.5px; font-weight:700; letter-spacing:0.08em;
-    color: var(--primary); text-transform:uppercase;
-    margin: 22px 0 12px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px; font-weight:600; letter-spacing:0.1em;
+    color: var(--primary-bright); text-transform:uppercase;
+    margin: 24px 0 12px;
     display:flex; align-items:center; gap:8px;
   }
   .section-title:first-child{ margin-top:0; }
   .section-title::before{
-    content:""; width:3px; height:12px; background: var(--accent); border-radius:2px;
+    content:""; width:12px; height:1.5px;
+    background: linear-gradient(90deg, var(--primary), var(--cyan));
+    border-radius:2px;
   }
 
   .field{ margin-bottom: 14px; }
-  .field label{ display:block; font-size:12.5px; font-weight:600; color: var(--ink-soft); margin-bottom:5px; }
+  .field label{ display:block; font-size:12.5px; font-weight:500; color: var(--ink-soft); margin-bottom:6px; }
+  .field .req{ color: var(--accent); font-weight:700; }
   .field input[type=text], .field input[type=number], .field select, .field textarea{
-    width:100%; font-family:'Noto Sans JP', sans-serif; font-size:14px; color: var(--ink);
-    background: #f7f8fb; border: 1px solid var(--panel-border); border-radius: 8px;
-    padding: 9px 11px; outline:none; transition: border-color .12s ease, background .12s ease;
+    width:100%; font-family:'Plus Jakarta Sans', sans-serif; font-size:14px; color: var(--ink);
+    background: var(--field-bg); border: 1px solid var(--panel-border); border-radius: 9px;
+    padding: 10px 12px; outline:none; transition: border-color .12s ease, box-shadow .12s ease;
   }
   .field textarea{ resize:vertical; min-height:64px; line-height:1.6; }
+  .field input::placeholder, .field textarea::placeholder{ color: var(--ink-faint); }
   .field input:focus, .field select:focus, .field textarea:focus{
-    border-color: var(--primary); background:#fff;
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,92,255,0.18);
   }
+  .field select{ appearance:none; background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%); background-position: calc(100% - 18px) center, calc(100% - 13px) center; background-size:5px 5px, 5px 5px; background-repeat:no-repeat; }
+
   .row2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .row3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
   .checkline{
-    display:flex; align-items:center; gap:8px; font-size:13px; color: var(--ink);
+    display:flex; align-items:center; gap:9px; font-size:13px; color: var(--ink-soft);
     margin-bottom: 10px;
   }
+  .checkline input[type=checkbox]{ accent-color: var(--primary); width:15px; height:15px; }
+
+  .extra-box{
+    border: 1px solid rgba(124,92,255,0.3);
+    background: rgba(124,92,255,0.06);
+    border-radius: 10px;
+    padding: 14px 14px 6px;
+    margin-bottom: 6px;
+  }
+  .extra-box label{ color: var(--primary-bright); }
+  .extra-box .hint{ font-size:11px; color: var(--ink-faint); margin: 6px 0 12px; line-height:1.6; }
 
   .generate-btn{
     width:100%; margin-top: 18px;
-    font-family:'Noto Sans JP', sans-serif; font-weight:700; font-size:14.5px;
-    color:#fff; background: var(--primary); border:none; border-radius: 10px;
-    padding: 13px; cursor:pointer;
-    transition: background .12s ease, transform .06s ease;
+    font-family:'Plus Jakarta Sans', sans-serif; font-weight:700; font-size:14.5px;
+    color:#0a0b0f; background: linear-gradient(135deg, var(--primary-bright), var(--cyan));
+    border:none; border-radius: 11px;
+    padding: 14px; cursor:pointer;
+    box-shadow: 0 10px 26px rgba(124,92,255,0.35);
+    transition: transform .08s ease, box-shadow .12s ease, filter .12s ease;
   }
-  .generate-btn:hover{ background: var(--primary-dark); }
+  .generate-btn:hover{ filter: brightness(1.06); transform: translateY(-1px); }
   .generate-btn:active{ transform: translateY(1px); }
-  .generate-btn:disabled{ opacity:.55; cursor:default; }
+  .generate-btn:disabled{ opacity:.4; cursor:default; transform:none; box-shadow:none; }
 
-  .status-msg{ font-size:12.5px; color: var(--ink-soft); margin-top: 10px; min-height: 16px; }
+  .status-msg{ font-size:12.5px; color: var(--ink-faint); margin-top: 10px; min-height: 16px; }
   .status-msg.error{ color: var(--accent); font-weight:700; }
 
   .loading-line{ display:none; align-items:center; gap:8px; font-size:12.5px; color: var(--ink-soft); margin-top:10px; }
   .loading-line.active{ display:flex; }
-  .pencil-track{ position:relative; width:80px; height:2px; background: var(--rule); overflow:hidden; border-radius:2px; }
+  .pencil-track{ position:relative; width:80px; height:2px; background: var(--panel-border); overflow:hidden; border-radius:2px; }
   .pencil-track::after{
     content:""; position:absolute; top:0; left:-40%; width:40%; height:100%;
-    background: var(--accent); animation: scribble 1.1s ease-in-out infinite;
+    background: linear-gradient(90deg, var(--primary), var(--cyan)); animation: scribble 1.1s ease-in-out infinite;
   }
   @keyframes scribble{ 0%{ left:-40%; } 50%{ left:100%; } 100%{ left:-40%; } }
 
   .font-note{
-    margin-top: 20px; font-size: 11px; line-height:1.7; color: var(--ink-soft);
-    background: var(--primary-soft); border-radius: 8px; padding: 10px 12px;
+    margin-top: 20px; font-size: 11px; line-height:1.7; color: var(--ink-faint);
+    background: var(--field-bg); border: 1px solid var(--panel-border); border-radius: 9px; padding: 10px 12px;
   }
 
   /* --- Preview column --- */
   .preview-toolbar{
     display:flex; align-items:center; justify-content:space-between;
-    padding: 14px 20px; margin-bottom: 18px;
+    padding: 14px 22px; margin-bottom: 18px;
   }
-  .preview-toolbar .label{ font-size:13px; color: var(--ink-soft); }
+  .preview-toolbar .label{ font-size:13px; color: var(--ink-soft); font-family:'JetBrains Mono', monospace; }
   .print-btn{
-    font-family:'Noto Sans JP', sans-serif; font-weight:700; font-size:13.5px;
-    color: var(--primary); background:#fff; border: 1.5px solid var(--primary);
+    font-family:'Plus Jakarta Sans', sans-serif; font-weight:700; font-size:13.5px;
+    color: var(--ink); background: transparent; border: 1.5px solid var(--primary);
     border-radius: 999px; padding: 9px 20px; cursor:pointer;
-    transition: background .12s ease, color .12s ease;
+    transition: background .12s ease, box-shadow .12s ease;
   }
-  .print-btn:hover{ background: var(--primary); color:#fff; }
-  .print-btn:disabled{ opacity:.4; cursor:default; }
+  .print-btn:hover{ background: rgba(124,92,255,0.15); box-shadow: 0 0 0 3px rgba(124,92,255,0.12); }
+  .print-btn:disabled{ opacity:.35; cursor:default; }
 
   .preview-stage{
-    background: #dde1e9;
-    border-radius: 14px;
+    background: radial-gradient(circle at 50% 0%, rgba(124,92,255,0.08), transparent 60%), #050609;
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
     padding: 32px;
     display:flex; justify-content:center;
   }
@@ -146,7 +182,7 @@
     min-height: 297mm;
     max-width: 100%;
     background:#fff;
-    box-shadow: 0 8px 30px rgba(20,25,40,0.18);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.55);
     padding: 16mm 16mm 18mm;
     font-family:'Kaisei Decol', serif;
     color:#1a1a1a;
@@ -213,14 +249,15 @@
   .a-row .a-exp{ color:#555; font-size:12px; margin-top:2px; }
 
   .empty-preview{
-    padding: 60px 20px; text-align:center; color: var(--ink-soft); font-size:13.5px; line-height:1.9;
+    padding: 70px 24px; text-align:center; color: var(--ink-faint); font-size:13.5px; line-height:1.9;
+    font-family:'Plus Jakarta Sans', sans-serif; background: var(--panel); border: 1px dashed var(--panel-border);
   }
 
   @media print{
     body *{ visibility:hidden; }
     .paper-page, .paper-page *{ visibility:visible; }
     .paper-page{ position:absolute; top:0; left:0; box-shadow:none; padding:14mm 14mm 16mm; width:auto; min-height:0; }
-    .preview-stage{ padding:0; background:none; }
+    .preview-stage{ padding:0; background:none; border:none; }
   }
   @page{ size: A4; margin: 0; }
 </style>
@@ -228,10 +265,14 @@
 <body>
 
 <div class="topbar">
-  <div>
-    <h1>テスト用紙メーカー</h1>
-    <div class="sub">Gemini APIで学校テストの問題を作成し、そのままPDF/印刷できます</div>
+  <div class="brand">
+    <span class="dot"></span>
+    <div>
+      <h1>テスト用紙メーカー</h1>
+      <div class="sub">Gemini APIで学校テストの問題を作成し、そのままPDF/印刷できます</div>
+    </div>
   </div>
+  <span class="badge">GEMINI POWERED</span>
 </div>
 
 <div class="layout">
@@ -252,7 +293,7 @@
         </div>
       </div>
       <div class="field">
-        <label for="topic">出題範囲・テーマ <span style="color:var(--accent)">必須</span></label>
+        <label for="topic">出題範囲・テーマ <span class="req">必須</span></label>
         <textarea id="topic" placeholder="例：電流とオームの法則、光合成と呼吸、江戸時代の産業と交通 など"></textarea>
       </div>
       <div class="row3">
@@ -280,6 +321,15 @@
       <div class="field">
         <label for="totalPoints">配点合計</label>
         <input type="number" id="totalPoints" value="100" min="1" max="200">
+      </div>
+
+      <div class="section-title">追加の指示</div>
+      <div class="extra-box">
+        <div class="field">
+          <label for="additionalInstructions">自由記述（任意）</label>
+          <textarea id="additionalInstructions" style="min-height:90px" placeholder="例：教科書『新編 新しい科学』に沿った表現にする／計算問題は電卓なしで解ける範囲にする／固有名詞は避ける／文章題を2問以上入れる　など、自由に指示できます"></textarea>
+        </div>
+        <p class="hint">ここに書いた内容はGeminiへの指示として最優先で反映されます。出題スタイル・避けたい内容・参考にしたい教材など、細かい要望はここに書いてください。</p>
       </div>
 
       <div class="section-title">用紙のヘッダー情報</div>
@@ -310,13 +360,13 @@
   <!-- 右: プレビュー -->
   <div>
     <div class="panel preview-toolbar">
-      <span class="label" id="previewLabel">プレビュー（作成するとここに表示されます）</span>
+      <span class="label" id="previewLabel">// プレビュー待機中</span>
       <button class="print-btn" id="printBtn" disabled>PDFとして保存 / 印刷</button>
     </div>
 
     <div class="preview-stage">
       <div id="paperArea">
-        <div class="empty-preview panel" style="width:210mm;max-width:100%;">
+        <div class="empty-preview" style="width:210mm;max-width:100%;">
           左のフォームに出題範囲を入力して「テスト用紙を作成する」を押すと、<br>
           ここにA4サイズの試験用紙プレビューが表示されます。
         </div>
@@ -434,6 +484,7 @@
     const schoolName = document.getElementById('schoolName').value.trim();
     const examDate = document.getElementById('examDate').value.trim();
     const includeAnswerSheet = document.getElementById('includeAnswerSheet').checked;
+    const additionalInstructions = document.getElementById('additionalInstructions').value.trim();
 
     if (!topic) {
       showStatus('出題範囲・テーマを入力してください。', true);
@@ -446,7 +497,7 @@
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, grade, topic, format, difficulty, count, totalPoints })
+        body: JSON.stringify({ subject, grade, topic, format, difficulty, count, totalPoints, additionalInstructions })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `サーバーエラー (${res.status})`);
@@ -454,7 +505,7 @@
       const questions = data.questions || [];
       paperArea.innerHTML = renderPaper(questions, { subject, grade, schoolName, examDate, totalPoints, includeAnswerSheet });
       printBtn.disabled = false;
-      previewLabel.textContent = `プレビュー（全${questions.length}問・${totalPoints}点満点）`;
+      previewLabel.textContent = `// 全${questions.length}問・${totalPoints}点満点`;
       showStatus(`${questions.length}問 作成しました。`);
     } catch (err) {
       console.error(err);
