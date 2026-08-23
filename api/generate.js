@@ -36,8 +36,8 @@ function difficultyInstruction(d) {
   return '標準的なレベル';
 }
 
-function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPoints }) {
-  return [
+function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPoints, referenceText, keywords, extraInstructions }) {
+  const lines = [
     'あなたは学校の定期テストを作成するベテラン教員です。紙に印刷して配布する、正式な試験問題を作成します。',
     `教科: ${subject || '指定なし'}`,
     `対象学年: ${grade || '指定なし'}`,
@@ -45,13 +45,35 @@ function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPo
     `難易度: ${difficultyInstruction(difficulty)}`,
     `問題数: ${count}問`,
     `配点合計: ${totalPoints}点（各問題のpointsの合計が概ね${totalPoints}になるように配分してください）`,
-    formatInstruction(format),
+    formatInstruction(format)
+  ];
+
+  if (referenceText && referenceText.trim()) {
+    lines.push(
+      '以下は出題の元になる参考文章です。この内容に基づいて出題してください（文章をそのまま書き写すだけの問題は避け、内容の理解を問う形にしてください）。',
+      '--- 参考文章 ここから ---',
+      referenceText.trim(),
+      '--- 参考文章 ここまで ---'
+    );
+  }
+
+  if (keywords && keywords.trim()) {
+    lines.push(`次のキーワードを、問題文または解答の中に必ず含めてください: ${keywords.trim()}`);
+  }
+
+  if (extraInstructions && extraInstructions.trim()) {
+    lines.push(`追加の指示（最優先で反映すること）: ${extraInstructions.trim()}`);
+  }
+
+  lines.push(
     '選択式の場合、options には選択肢の本文だけを4つ入れてください（「ア」「イ」などの記号は付けないでください。表示側で付与します）。answer には正解の選択肢の文言をそのまま入れてください。',
     '記述式の場合、options は空配列にし、answer に模範解答を入れてください。あわせて answerLength に "short"（一行程度の短答）か "long"（数行の説明が必要な問題）のどちらかを入れてください。',
     '各問題には explanation として、採点者向けの簡潔な解説・採点基準を付けてください。',
     '問題文は生徒が読む正式な試験問題として自然な日本語にし、学年にふさわしい語彙・表現を使ってください。',
     '出力は指定されたJSONスキーマのオブジェクトのみとし、前置きや説明文、Markdown装飾は含めないでください。'
-  ].join('\n');
+  );
+
+  return lines.join('\n');
 }
 
 export default async function handler(req, res) {
@@ -66,7 +88,10 @@ export default async function handler(req, res) {
 
   const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 
-  const { subject, grade, topic, format, difficulty, count, totalPoints } = req.body || {};
+  const {
+    subject, grade, topic, format, difficulty, count, totalPoints,
+    referenceText, keywords, extraInstructions
+  } = req.body || {};
 
   if (!topic || typeof topic !== 'string' || !topic.trim()) {
     return res.status(400).json({ error: '出題範囲・テーマ(topic)が正しく送られていません' });
@@ -77,6 +102,11 @@ export default async function handler(req, res) {
   const safeDifficulty = ['easy', 'normal', 'hard'].includes(difficulty) ? difficulty : 'normal';
   const safeTotalPoints = Math.min(200, Math.max(safeCount, parseInt(totalPoints, 10) || 100));
 
+  // 参考文章が長すぎるとトークンを圧迫するため一定文字数で切る
+  const safeReferenceText = typeof referenceText === 'string' ? referenceText.slice(0, 6000) : '';
+  const safeKeywords = typeof keywords === 'string' ? keywords.slice(0, 300) : '';
+  const safeExtraInstructions = typeof extraInstructions === 'string' ? extraInstructions.slice(0, 800) : '';
+
   try {
     const prompt = buildPrompt({
       subject: (subject || '').trim(),
@@ -85,7 +115,10 @@ export default async function handler(req, res) {
       format: safeFormat,
       difficulty: safeDifficulty,
       count: safeCount,
-      totalPoints: safeTotalPoints
+      totalPoints: safeTotalPoints,
+      referenceText: safeReferenceText,
+      keywords: safeKeywords,
+      extraInstructions: safeExtraInstructions
     });
 
     const response = await fetch(
