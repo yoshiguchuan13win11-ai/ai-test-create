@@ -36,7 +36,7 @@ function difficultyInstruction(d) {
   return '標準的なレベル';
 }
 
-function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPoints, referenceText, keywords, extraInstructions }) {
+function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPoints, referenceText, keywords, extraInstructions, sampleProblems }) {
   const lines = [
     'あなたは学校の定期テストを作成するベテラン教員です。紙に印刷して配布する、正式な試験問題を作成します。',
     `教科: ${subject || '指定なし'}`,
@@ -57,6 +57,15 @@ function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPo
     );
   }
 
+  if (sampleProblems && sampleProblems.trim()) {
+    lines.push(
+      '以下は「このような形式・レベル感で出題してほしい」という例題です。内容をそのままコピーするのではなく、この例題と同じ種類の問題・同程度の難しさ・同じ書き方のスタイルで、新しい問題を作成してください。',
+      '--- 出題例 ここから ---',
+      sampleProblems.trim(),
+      '--- 出題例 ここまで ---'
+    );
+  }
+
   if (keywords && keywords.trim()) {
     lines.push(`次のキーワードを、問題文または解答の中に必ず含めてください: ${keywords.trim()}`);
   }
@@ -70,6 +79,10 @@ function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPo
     '記述式の場合、options は空配列にし、answer に模範解答を入れてください。あわせて answerLength に "short"（一行程度の短答）か "long"（数行の説明が必要な問題）のどちらかを入れてください。',
     '各問題には explanation として、採点者向けの簡潔な解説・採点基準を付けてください。',
     '問題文は生徒が読む正式な試験問題として自然な日本語にし、学年にふさわしい語彙・表現を使ってください。',
+    '',
+    '【数式の書き方について・重要】',
+    'question、answer、explanation のいずれにおいても、LaTeX記法は絶対に使用しないでください。具体的には $ や \\( \\) で数式を囲むこと、\\frac{}{}、^{}、\\times、\\cdot、\\pi のようにバックスラッシュ(\\)を使う記法は禁止です。そのまま紙に印刷してPDFとして読める、ふつうの日本語の教科書と同じプレーンテキストの書き方にしてください。',
+    '例: 累乗は x^2 のように半角のキャレット(^)を使う（$x^2$ とは書かない）。分数は a/b のように斜線で表す（\\frac{a}{b} とは書かない）。平方根はそのまま √ の記号を使う（\\sqrt{} とは書かない）。円周率はそのまま π を使う。掛け算は × を使うか、文字式ではそのまま隣に並べる（\\times は使わない）。',
     '出力は指定されたJSONスキーマのオブジェクトのみとし、前置きや説明文、Markdown装飾は含めないでください。'
   );
 
@@ -90,7 +103,7 @@ export default async function handler(req, res) {
 
   const {
     subject, grade, topic, format, difficulty, count, totalPoints,
-    referenceText, keywords, extraInstructions
+    referenceText, keywords, extraInstructions, sampleProblems
   } = req.body || {};
 
   if (!topic || typeof topic !== 'string' || !topic.trim()) {
@@ -106,6 +119,7 @@ export default async function handler(req, res) {
   const safeReferenceText = typeof referenceText === 'string' ? referenceText.slice(0, 6000) : '';
   const safeKeywords = typeof keywords === 'string' ? keywords.slice(0, 300) : '';
   const safeExtraInstructions = typeof extraInstructions === 'string' ? extraInstructions.slice(0, 800) : '';
+  const safeSampleProblems = typeof sampleProblems === 'string' ? sampleProblems.slice(0, 2000) : '';
 
   try {
     const prompt = buildPrompt({
@@ -118,7 +132,8 @@ export default async function handler(req, res) {
       totalPoints: safeTotalPoints,
       referenceText: safeReferenceText,
       keywords: safeKeywords,
-      extraInstructions: safeExtraInstructions
+      extraInstructions: safeExtraInstructions,
+      sampleProblems: safeSampleProblems
     });
 
     const response = await fetch(
