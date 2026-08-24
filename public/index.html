@@ -222,6 +222,10 @@
 
   .desc-lines{ margin: 8px 0 0 26px; }
   .desc-lines .l{ border-bottom: 1px solid #999; height: 22px; }
+  .calc-blank{
+    display:inline-block; width: 110px; height: 1.1em;
+    border-bottom: 1.3px solid #333; margin-left: 10px; vertical-align: middle;
+  }
 
   .answer-sheet{ margin-top: 26px; page-break-before: always; }
   .answer-sheet h2{ font-size:16px; border-bottom:2px solid #1a1a1a; padding-bottom:6px; margin-bottom:14px; }
@@ -278,9 +282,10 @@
         <div class="field">
           <label for="format">出題形式</label>
           <select id="format">
-            <option value="mixed">選択式・記述式混在</option>
+            <option value="mixed">選択式・記述式・計算問題を混在</option>
             <option value="mc">選択式のみ</option>
             <option value="desc">記述式のみ</option>
+            <option value="calc">計算問題（穴埋め式）のみ</option>
           </select>
         </div>
         <div class="field">
@@ -435,18 +440,19 @@
     questions.forEach((q, i) => {
       const num = i + 1;
       const isMC = q.type === 'multiple_choice' && Array.isArray(q.options) && q.options.length > 0;
+      const isCalc = q.type === 'calculation';
       qHtml += `<div class="q-block">
         <div class="q-head">
           <span class="q-num">問${num}</span>
           <span class="q-points">(${q.points || '-'}点)</span>
-          <span class="q-text">${escapeHtml(cleanMath(q.question))}</span>
+          <span class="q-text">${escapeHtml(cleanMath(q.question))}${isCalc ? '<span class="calc-blank"></span>' : ''}</span>
         </div>`;
       if (isMC) {
         qHtml += '<ul class="mc-options">' + q.options.map((opt, oi) =>
           `<li><span class="kana">${KANA[oi] || (oi+1)}</span>${escapeHtml(cleanMath(opt))}</li>`
         ).join('') + '</ul>';
         qHtml += `<div class="mc-answer-blank">答え<span class="box"></span></div>`;
-      } else {
+      } else if (!isCalc) {
         const lines = q.answerLength === 'long' ? 4 : 2;
         qHtml += '<div class="desc-lines">' + Array.from({length: lines}).map(() => '<div class="l"></div>').join('') + '</div>';
       }
@@ -570,13 +576,15 @@
 
     questions.forEach((q, i) => {
       const isMC = q.type === 'multiple_choice' && Array.isArray(q.options) && q.options.length > 0;
-      model.push({ text: `問${i + 1}　(${q.points || '-'}点)　${cleanMath(q.question)}`, style: 'Question' });
+      const isCalc = q.type === 'calculation';
+      const qText = `問${i + 1}　(${q.points || '-'}点)　${cleanMath(q.question)}${isCalc ? '　＿＿＿＿＿＿＿＿' : ''}`;
+      model.push({ text: qText, style: 'Question' });
       if (isMC) {
         q.options.forEach((opt, oi) => {
           model.push({ text: `　${KANA[oi] || (oi + 1)}　${cleanMath(opt)}`, style: 'Normal' });
         });
         model.push({ text: '　答え（　　）', style: 'Normal' });
-      } else {
+      } else if (!isCalc) {
         const lineCount = q.answerLength === 'long' ? 4 : 2;
         for (let l = 0; l < lineCount; l++) model.push({ text: '　', style: 'Blank' });
       }
