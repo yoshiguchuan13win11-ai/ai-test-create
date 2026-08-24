@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   :root{
     --bg-0: #070707;
@@ -38,22 +40,10 @@
   }
 
   .topbar{
-    display:flex; align-items:center; justify-content:space-between;
-    padding: 18px 28px;
+    padding: 20px 28px;
     border-bottom: 1px solid var(--border-soft);
-    backdrop-filter: blur(10px);
-  }
-  .topbar .brand{ display:flex; align-items:center; gap:10px; }
-  .topbar .dot{
-    width:9px; height:9px; border-radius:50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    box-shadow: 0 0 12px var(--accent-glow);
   }
   .topbar h1{ font-size: 15px; font-weight:700; margin:0; letter-spacing:0.01em; }
-  .topbar .sub{
-    font-family:'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ink-faint);
-    margin-top:3px; letter-spacing:0.03em;
-  }
 
   .layout{
     display:grid;
@@ -67,30 +57,24 @@
   @media (max-width: 980px){ .layout{ grid-template-columns: 1fr; } }
 
   .panel{
-    background: linear-gradient(180deg, var(--panel), var(--panel-alt));
+    background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .control-panel{ position: sticky; top: 20px; padding: 26px; }
   .section-title{
-    font-family:'JetBrains Mono', monospace;
-    font-size: 10.5px; font-weight:700; letter-spacing:0.14em;
-    color: var(--accent); text-transform:uppercase;
+    font-size: 11px; font-weight:700; letter-spacing:0.06em;
+    color: var(--ink-soft);
     margin: 26px 0 13px;
-    display:flex; align-items:center; gap:9px;
   }
   .section-title:first-child{ margin-top:0; }
-  .section-title::before{
-    content:""; width:14px; height:1.5px;
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  }
   .section-hint{ font-size: 11px; color: var(--ink-faint); margin: -8px 0 12px; line-height:1.6; }
 
   .field{ margin-bottom: 14px; }
   .field label{ display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; font-weight:600; color: var(--ink-soft); margin-bottom:6px; }
-  .field label .opt{ font-family:'JetBrains Mono', monospace; font-size:9.5px; color: var(--ink-faint); font-weight:400; }
+  .field label .opt{ font-family:'Zen Kaku Gothic New', sans-serif; font-size:9.5px; color: var(--ink-faint); font-weight:400; }
   .field input[type=text], .field input[type=number], .field select, .field textarea{
     width:100%; font-family:'Zen Kaku Gothic New', sans-serif; font-size:13.5px; color: var(--ink);
     background: #0d0f16; border: 1px solid var(--border); border-radius: 9px;
@@ -132,17 +116,17 @@
     font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:14.5px;
     color:#0a0a0a; background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border:none; border-radius: 11px; padding: 14px; cursor:pointer;
-    box-shadow: 0 10px 26px var(--accent-glow);
-    transition: transform .08s ease, box-shadow .12s ease;
+    box-shadow: none;
+    transition: transform .08s ease, opacity .12s ease;
   }
-  .generate-btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 32px var(--accent-glow); }
+  .generate-btn:hover{ opacity:.9; }
   .generate-btn:active{ transform: translateY(0px); }
   .generate-btn:disabled{ opacity:.4; cursor:default; transform:none; box-shadow:none; }
 
   .status-msg{ font-size:12.5px; color: var(--ink-soft); margin-top: 10px; min-height: 16px; }
   .status-msg.error{ color: var(--danger); font-weight:700; }
 
-  .loading-line{ display:none; align-items:center; gap:8px; font-size:12px; color: var(--ink-faint); margin-top:10px; font-family:'JetBrains Mono', monospace; }
+  .loading-line{ display:none; align-items:center; gap:8px; font-size:12px; color: var(--ink-faint); margin-top:10px; font-family:'Zen Kaku Gothic New', sans-serif; }
   .loading-line.active{ display:flex; }
   .pencil-track{ position:relative; width:80px; height:2px; background: var(--border); overflow:hidden; border-radius:2px; }
   .pencil-track::after{
@@ -157,37 +141,34 @@
   }
 
   /* --- Preview column --- */
-  .preview-toolbar{
-    display:flex; align-items:center; justify-content:space-between;
-    padding: 15px 20px; margin-bottom: 18px;
-  }
-  .preview-toolbar .label{ font-family:'JetBrains Mono', monospace; font-size:11.5px; color: var(--ink-soft); }
-  .toolbar-btns{ display:flex; gap:10px; }
-  .print-btn{
-    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13.5px;
-    color: var(--ink); background: transparent; border: 1.5px solid var(--accent);
-    border-radius: 999px; padding: 9px 20px; cursor:pointer;
-    transition: background .12s ease, box-shadow .12s ease;
-  }
-  .print-btn:hover{ background: rgba(255,255,255,0.10); box-shadow: 0 0 0 4px rgba(255,255,255,0.06); }
-  .print-btn:disabled{ opacity:.35; cursor:default; box-shadow:none; }
-  .docx-btn{
-    font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13.5px;
-    color:#0a0a0a; background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    border:none; border-radius: 999px; padding: 9px 20px; cursor:pointer;
-    box-shadow: 0 6px 18px var(--accent-glow);
-    transition: transform .08s ease, box-shadow .12s ease;
-  }
-  .docx-btn:hover{ transform: translateY(-1px); }
-  .docx-btn:disabled{ opacity:.3; cursor:default; transform:none; box-shadow:none; }
-
   .preview-stage{
-    background: radial-gradient(600px 300px at 50% -10%, rgba(255,255,255,0.05), transparent 60%), #050505;
-    border: 1px solid var(--border-soft);
-    border-radius: 16px;
+    background: #050505;
+    border: 1px solid var(--border);
+    border-radius: 0;
     padding: 32px;
     display:flex; justify-content:center;
   }
+
+  .export-panel{
+    display:flex; gap: 14px; margin-top: 14px;
+  }
+  .export-box{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 20px 22px;
+    flex: 1;
+  }
+  .export-title{ font-size: 14.5px; font-weight:700; margin: 0 0 8px; }
+  .export-summary{ font-size: 12px; color: var(--ink-soft); }
+  .export-list{ display:flex; flex-direction:column; gap: 10px; }
+  .export-item{
+    text-align:left; background:transparent; border:none; padding:0;
+    font-family:'Zen Kaku Gothic New', sans-serif; font-size: 13.5px; color: var(--ink);
+    cursor:pointer;
+  }
+  .export-item::before{ content:"・"; }
+  .export-item:hover:not(:disabled){ text-decoration: underline; }
+  .export-item:disabled{ color: var(--ink-faint); cursor:default; }
 
   .paper-page{
     width: 210mm;
@@ -250,9 +231,12 @@
   .a-row .a-exp{ color:#555; font-size:12px; margin-top:2px; }
 
   .empty-preview{
-    padding: 70px 20px; text-align:center; color: var(--ink-faint); font-size:13.5px; line-height:2;
-    font-family:'JetBrains Mono', monospace; background: var(--panel); border:1px solid var(--border);
+    min-height: 500px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+    text-align:center; background: var(--panel); border:1px solid var(--border);
   }
+  .empty-preview .big{ font-size: 44px; font-weight:700; color: var(--ink); letter-spacing:0.05em; }
+  .empty-preview .hint{ font-size: 12.5px; color: var(--ink-faint); line-height:1.9; }
 
   @media print{
     body *{ visibility:hidden; }
@@ -266,13 +250,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brand">
-    <span class="dot"></span>
-    <div>
-      <h1>テスト用紙メーカー</h1>
-      <div class="sub">GEMINI API / PRINT-READY EXAM SHEETS</div>
-    </div>
-  </div>
+  <h1>プリント作成ツール</h1>
 </div>
 
 <div class="layout">
@@ -363,7 +341,7 @@
 
       <button type="submit" class="generate-btn" id="genBtn">テスト用紙を作成する</button>
       <div class="loading-line" id="loadingLine">
-        <span class="pencil-track"></span><span>generating…</span>
+        <span class="pencil-track"></span><span>作成中…</span>
       </div>
       <div class="status-msg" id="statusMsg"></div>
 
@@ -375,20 +353,25 @@
 
   <!-- 右: プレビュー -->
   <div>
-    <div class="panel preview-toolbar">
-      <span class="label" id="previewLabel">PREVIEW — 作成するとここに表示されます</span>
-      <div class="toolbar-btns">
-        <button class="docx-btn" id="docxBtn" disabled>Word(.docx)でダウンロード</button>
-        <button class="print-btn" id="printBtn" disabled>PDFとして保存 / 印刷</button>
-      </div>
-    </div>
-
     <div class="preview-stage">
       <div id="paperArea">
         <div class="empty-preview" style="width:210mm;max-width:100%;">
-          左のフォームに出題範囲を入力して「テスト用紙を作成する」を押すと、<br>
-          ここにA4サイズの試験用紙プレビューが表示されます。
+          <div class="big">プレビュー</div>
+          <div class="hint">左のフォームに出題範囲を入力して「テスト用紙を作成する」を押すと、<br>ここにA4サイズの試験用紙が表示されます。</div>
         </div>
+      </div>
+    </div>
+
+    <div class="export-panel">
+      <div class="export-box">
+        <div class="export-title">エクスポート</div>
+        <div class="export-summary" id="previewLabel">作成するとここに反映されます</div>
+      </div>
+      <div class="export-box export-list">
+        <button class="export-item" id="printBtn" disabled>PDFとして保存</button>
+        <button class="export-item" id="docxBtn" disabled>Word（.docx）</button>
+        <button class="export-item" id="odtBtn" disabled>LibreOffice（.odt）</button>
+        <button class="export-item" id="pngBtn" disabled>PNG画像</button>
       </div>
     </div>
   </div>
@@ -404,6 +387,8 @@
   const paperArea = document.getElementById('paperArea');
   const printBtn = document.getElementById('printBtn');
   const docxBtn = document.getElementById('docxBtn');
+  const odtBtn = document.getElementById('odtBtn');
+  const pngBtn = document.getElementById('pngBtn');
   const previewLabel = document.getElementById('previewLabel');
   let lastQuestions = null;
   let lastOpts = null;
@@ -552,7 +537,9 @@
       lastOpts = opts;
       printBtn.disabled = false;
       docxBtn.disabled = false;
-      previewLabel.textContent = `PREVIEW — 全${questions.length}問・${totalPoints}点満点`;
+      odtBtn.disabled = false;
+      pngBtn.disabled = false;
+      previewLabel.textContent = `全${questions.length}問・${totalPoints}点満点`;
       showStatus(`${questions.length}問 作成しました。`);
     } catch (err) {
       console.error(err);
@@ -570,116 +557,166 @@
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  async function buildDocxBlob(questions, opts){
-    const { Document, Packer, Paragraph, TextRun, BorderStyle } = window.docx;
-    const KANA = ['ア','イ','ウ','エ','オ','カ'];
-    const children = [];
-
-    if (opts.schoolName) {
-      children.push(new Paragraph({ children: [ new TextRun({ text: opts.schoolName, size: 18, color: '444444' }) ] }));
-    }
-    children.push(new Paragraph({
-      children: [ new TextRun({ text: `${opts.subject || 'テスト'}　テスト`, bold: true, size: 36 }) ],
-      spacing: { after: 80 }
-    }));
+  // Word(.docx) / LibreOffice(.odt) 共通で使う文書構造モデルを作る
+  function buildContentModel(questions, opts){
+    const model = [];
+    if (opts.schoolName) model.push({ text: opts.schoolName, style: 'Meta' });
+    model.push({ text: `${opts.subject || 'テスト'}　テスト`, style: 'Title' });
     const metaText = [opts.grade, opts.examDate].filter(Boolean).join('　');
-    if (metaText) {
-      children.push(new Paragraph({ children: [ new TextRun({ text: metaText, size: 18, color: '555555' }) ], spacing: { after: 200 } }));
-    }
-    children.push(new Paragraph({
-      children: [ new TextRun({ text: `得点：　　　　／ ${opts.totalPoints}点`, bold: true, size: 22 }) ],
-      spacing: { after: 200 }
-    }));
-    children.push(new Paragraph({
-      children: [ new TextRun({ text: '組（　　） 番（　　） 氏名（　　　　　　　　　　）', size: 20 }) ],
-      spacing: { after: 120 }
-    }));
-    children.push(new Paragraph({
-      children: [ new TextRun({ text: '・字は丁寧に、はっきりと書きましょう。　・見直しの時間を大切に。', size: 16, color: '555555' }) ],
-      spacing: { after: 300 }
-    }));
+    if (metaText) model.push({ text: metaText, style: 'Meta' });
+    model.push({ text: `得点：　　　　／ ${opts.totalPoints}点`, style: 'Score' });
+    model.push({ text: '組（　　） 番（　　） 氏名（　　　　　　　　　　）', style: 'Normal' });
+    model.push({ text: '・字は丁寧に、はっきりと書きましょう。　・見直しの時間を大切に。', style: 'Meta' });
 
     questions.forEach((q, i) => {
       const isMC = q.type === 'multiple_choice' && Array.isArray(q.options) && q.options.length > 0;
-      children.push(new Paragraph({
-        children: [
-          new TextRun({ text: `問${i + 1}　`, bold: true, size: 24 }),
-          new TextRun({ text: `(${q.points || '-'}点)　`, size: 18, color: '666666' }),
-          new TextRun({ text: cleanMath(q.question), size: 24 })
-        ],
-        spacing: { before: 200, after: 100 }
-      }));
+      model.push({ text: `問${i + 1}　(${q.points || '-'}点)　${cleanMath(q.question)}`, style: 'Question' });
       if (isMC) {
         q.options.forEach((opt, oi) => {
-          children.push(new Paragraph({
-            children: [ new TextRun({ text: `　${KANA[oi] || (oi + 1)}　${cleanMath(opt)}`, size: 22 }) ],
-            spacing: { after: 60 }
-          }));
+          model.push({ text: `　${KANA[oi] || (oi + 1)}　${cleanMath(opt)}`, style: 'Normal' });
         });
-        children.push(new Paragraph({
-          children: [ new TextRun({ text: '　答え（　　）', size: 20 }) ],
-          spacing: { after: 120 }
-        }));
+        model.push({ text: '　答え（　　）', style: 'Normal' });
       } else {
         const lineCount = q.answerLength === 'long' ? 4 : 2;
-        for (let l = 0; l < lineCount; l++) {
-          children.push(new Paragraph({
-            border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '999999' } },
-            spacing: { after: 160 },
-            children: [ new TextRun({ text: ' ' }) ]
-          }));
-        }
+        for (let l = 0; l < lineCount; l++) model.push({ text: '　', style: 'Blank' });
       }
     });
 
     if (opts.includeAnswerSheet) {
-      children.push(new Paragraph({ children: [], pageBreakBefore: true }));
-      children.push(new Paragraph({
-        children: [ new TextRun({ text: '解答・採点基準（教員用）', bold: true, size: 28 }) ],
-        spacing: { after: 200 },
-        border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000' } }
-      }));
+      model.push({ text: '解答・採点基準（教員用）', style: 'AnswerHeading', pageBreak: true });
       questions.forEach((q, i) => {
-        children.push(new Paragraph({
-          children: [
-            new TextRun({ text: `問${i + 1}　`, bold: true, size: 22 }),
-            new TextRun({ text: cleanMath(q.answer), bold: true, size: 22 })
-          ],
-          spacing: { before: 120, after: 40 }
-        }));
-        if (q.explanation) {
-          children.push(new Paragraph({
-            children: [ new TextRun({ text: cleanMath(q.explanation), size: 18, color: '555555' }) ],
-            spacing: { after: 120 }
-          }));
-        }
+        model.push({ text: `問${i + 1}　${cleanMath(q.answer)}`, style: 'AnswerBold' });
+        if (q.explanation) model.push({ text: cleanMath(q.explanation), style: 'Meta' });
       });
     }
+    return model;
+  }
 
+  async function buildDocxBlob(model){
+    const { Document, Packer, Paragraph, TextRun, BorderStyle } = window.docx;
+    const STYLE = {
+      Title: { bold: true, size: 36 },
+      Meta: { size: 18, color: '555555' },
+      Score: { bold: true, size: 22 },
+      Normal: { size: 22 },
+      Question: { bold: true, size: 24 },
+      AnswerHeading: { bold: true, size: 28 },
+      AnswerBold: { bold: true, size: 22 },
+      Blank: { size: 22 }
+    };
+    const children = model.map(item => {
+      const def = STYLE[item.style] || {};
+      const p = {
+        children: [ new TextRun({ text: item.text, ...def }) ],
+        spacing: { after: item.style === 'Title' ? 80 : 140 }
+      };
+      if (item.pageBreak) p.pageBreakBefore = true;
+      if (item.style === 'Blank') p.border = { bottom: { style: BorderStyle.SINGLE, size: 4, color: '999999' } };
+      if (item.style === 'AnswerHeading') p.border = { bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000' } };
+      return new Paragraph(p);
+    });
     const doc = new Document({
       sections: [{ properties: {}, children }],
       styles: { default: { document: { run: { font: 'Kaisei Decol' } } } }
     });
-
     return await Packer.toBlob(doc);
   }
 
+  function escapeXml(str){
+    return String(str == null ? '' : str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  }
+
+  async function buildOdtBlob(model){
+    const stylesXml = `
+      <style:style style:name="Title" style:family="paragraph"><style:text-properties fo:font-size="18pt" fo:font-weight="bold"/></style:style>
+      <style:style style:name="Meta" style:family="paragraph"><style:text-properties fo:font-size="9pt" fo:color="#555555"/></style:style>
+      <style:style style:name="Score" style:family="paragraph"><style:text-properties fo:font-size="12pt" fo:font-weight="bold"/></style:style>
+      <style:style style:name="Normal" style:family="paragraph"><style:text-properties fo:font-size="11pt"/></style:style>
+      <style:style style:name="Question" style:family="paragraph"><style:text-properties fo:font-size="12pt" fo:font-weight="bold"/><style:paragraph-properties fo:margin-top="0.3cm"/></style:style>
+      <style:style style:name="AnswerHeading" style:family="paragraph"><style:text-properties fo:font-size="14pt" fo:font-weight="bold"/><style:paragraph-properties fo:break-before="page" fo:border-bottom="1pt solid #000000"/></style:style>
+      <style:style style:name="AnswerBold" style:family="paragraph"><style:text-properties fo:font-size="11pt" fo:font-weight="bold"/></style:style>
+      <style:style style:name="Blank" style:family="paragraph"><style:paragraph-properties fo:border-bottom="0.5pt solid #999999" fo:margin-bottom="0.3cm"/></style:style>
+    `;
+    const bodyXml = model.map(item => `<text:p text:style-name="${item.style}">${escapeXml(item.text)}</text:p>`).join('\n');
+    const contentXml = `<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" office:version="1.2">
+<office:automatic-styles>${stylesXml}</office:automatic-styles>
+<office:body><office:text>${bodyXml}</office:text></office:body>
+</office:document-content>`;
+    const manifestXml = `<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.2">
+ <manifest:file-entry manifest:full-path="/" manifest:version="1.2" manifest:media-type="application/vnd.oasis.opendocument.text"/>
+ <manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>
+</manifest:manifest>`;
+
+    const zip = new window.JSZip();
+    zip.file('mimetype', 'application/vnd.oasis.opendocument.text', { compression: 'STORE' });
+    zip.folder('META-INF').file('manifest.xml', manifestXml);
+    zip.file('content.xml', contentXml);
+    return await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.oasis.opendocument.text' });
+  }
+
+  async function exportPng(){
+    const paperEl = paperArea.querySelector('.paper-page');
+    if (!paperEl) return;
+    const canvas = await window.html2canvas(paperEl, { backgroundColor: '#ffffff', scale: 2 });
+    await new Promise(resolve => {
+      canvas.toBlob(blob => {
+        const fname = `${(lastOpts.subject || 'テスト')}_${(lastOpts.grade || '')}.png`.replace(/\s+/g, '');
+        downloadBlob(blob, fname);
+        resolve();
+      });
+    });
+  }
+
+  function fileBaseName(){
+    return `${(lastOpts.subject || 'テスト')}_${(lastOpts.grade || '')}`.replace(/\s+/g, '');
+  }
+
   docxBtn.addEventListener('click', async () => {
-    if (!window.docx) {
-      showStatus('Wordファイル生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true);
-      return;
-    }
+    if (!window.docx) { showStatus('Wordファイル生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true); return; }
     if (!lastQuestions) return;
     docxBtn.disabled = true;
     try {
-      const blob = await buildDocxBlob(lastQuestions, lastOpts);
-      const fname = `${(lastOpts.subject || 'テスト')}_${(lastOpts.grade || '')}.docx`.replace(/\s+/g, '');
-      downloadBlob(blob, fname);
+      const model = buildContentModel(lastQuestions, lastOpts);
+      const blob = await buildDocxBlob(model);
+      downloadBlob(blob, fileBaseName() + '.docx');
     } catch (err) {
       console.error(err);
       showStatus('Wordファイルの作成に失敗しました。', true);
     } finally {
       docxBtn.disabled = false;
+    }
+  });
+
+  odtBtn.addEventListener('click', async () => {
+    if (!window.JSZip) { showStatus('LibreOfficeファイル生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true); return; }
+    if (!lastQuestions) return;
+    odtBtn.disabled = true;
+    try {
+      const model = buildContentModel(lastQuestions, lastOpts);
+      const blob = await buildOdtBlob(model);
+      downloadBlob(blob, fileBaseName() + '.odt');
+    } catch (err) {
+      console.error(err);
+      showStatus('LibreOfficeファイルの作成に失敗しました。', true);
+    } finally {
+      odtBtn.disabled = false;
+    }
+  });
+
+  pngBtn.addEventListener('click', async () => {
+    if (!window.html2canvas) { showStatus('PNG生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true); return; }
+    if (!lastQuestions) return;
+    pngBtn.disabled = true;
+    try {
+      await exportPng();
+    } catch (err) {
+      console.error(err);
+      showStatus('PNG画像の作成に失敗しました。', true);
+    } finally {
+      pngBtn.disabled = false;
     }
   });
 
