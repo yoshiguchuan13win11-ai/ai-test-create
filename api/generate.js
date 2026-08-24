@@ -9,7 +9,7 @@ const RESPONSE_SCHEMA = {
       items: {
         type: 'OBJECT',
         properties: {
-          type: { type: 'STRING', enum: ['multiple_choice', 'descriptive'] },
+          type: { type: 'STRING', enum: ['multiple_choice', 'descriptive', 'calculation'] },
           question: { type: 'STRING' },
           points: { type: 'NUMBER' },
           options: { type: 'ARRAY', items: { type: 'STRING' } },
@@ -27,7 +27,8 @@ const RESPONSE_SCHEMA = {
 function formatInstruction(format) {
   if (format === 'mc') return '全ての問題を4択の選択式にしてください。';
   if (format === 'desc') return '全ての問題を記述式にしてください。options は空配列にしてください。';
-  return '選択式（4択）と記述式をバランスよく混在させてください。';
+  if (format === 'calc') return '全ての問題を、計算問題（穴埋め式）にしてください。「3x + 5x =」のように式の続きに空欄を置いて一言（数値や簡単な式）で答えさせる形式にし、説明を書かせる問題は含めないでください。options は空配列にしてください。';
+  return '選択式（4択）・記述式・計算問題（穴埋め式）をバランスよく混在させてください。';
 }
 
 function difficultyInstruction(d) {
@@ -77,6 +78,7 @@ function buildPrompt({ subject, grade, topic, format, difficulty, count, totalPo
   lines.push(
     '選択式の場合、options には選択肢の本文だけを4つ入れてください（「ア」「イ」などの記号は付けないでください。表示側で付与します）。answer には正解の選択肢の文言をそのまま入れてください。',
     '記述式の場合、options は空配列にし、answer に模範解答を入れてください。あわせて answerLength に "short"（一行程度の短答）か "long"（数行の説明が必要な問題）のどちらかを入れてください。',
+    '計算問題（穴埋め式）の場合、question には「3x + 5x =」のように、式の続きを答えさせる形の問題文を入れてください（説明や理由を問う文章にはしないでください）。options は空配列にし、answer には計算結果（例:「8x」）だけを入れてください。',
     '各問題には explanation として、採点者向けの簡潔な解説・採点基準を付けてください。',
     '問題文は生徒が読む正式な試験問題として自然な日本語にし、学年にふさわしい語彙・表現を使ってください。',
     '',
@@ -111,7 +113,7 @@ export default async function handler(req, res) {
   }
 
   const safeCount = Math.min(20, Math.max(1, parseInt(count, 10) || 5));
-  const safeFormat = ['mc', 'desc', 'mixed'].includes(format) ? format : 'mixed';
+  const safeFormat = ['mc', 'desc', 'calc', 'mixed'].includes(format) ? format : 'mixed';
   const safeDifficulty = ['easy', 'normal', 'hard'].includes(difficulty) ? difficulty : 'normal';
   const safeTotalPoints = Math.min(200, Math.max(safeCount, parseInt(totalPoints, 10) || 100));
 
