@@ -10,18 +10,18 @@
 <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 <style>
   :root{
-    --bg-0: #0a0b10;
-    --bg-1: #0f1117;
-    --panel: #14161f;
-    --panel-alt: #181b26;
-    --border: #262a38;
-    --border-soft: #1e2129;
-    --ink: #eef0f6;
-    --ink-soft: #8b91a5;
-    --ink-faint: #565c70;
-    --accent: #7c8cff;
-    --accent-2: #a78bfa;
-    --accent-glow: rgba(124,140,255,0.35);
+    --bg-0: #070707;
+    --bg-1: #0b0b0b;
+    --panel: #121212;
+    --panel-alt: #171717;
+    --border: #2c2c2c;
+    --border-soft: #1e1e1e;
+    --ink: #f5f5f5;
+    --ink-soft: #9a9a9a;
+    --ink-faint: #666666;
+    --accent: #ffffff;
+    --accent-2: #c9c9c9;
+    --accent-glow: rgba(255,255,255,0.18);
     --danger: #ff6b6b;
     --paper: #ffffff;
   }
@@ -29,8 +29,8 @@
   html,body{ margin:0; padding:0; }
   body{
     background:
-      radial-gradient(880px 480px at 12% -8%, rgba(124,140,255,0.16), transparent 60%),
-      radial-gradient(760px 460px at 100% 0%, rgba(167,139,250,0.12), transparent 55%),
+      radial-gradient(880px 480px at 12% -8%, rgba(255,255,255,0.06), transparent 60%),
+      radial-gradient(760px 460px at 100% 0%, rgba(255,255,255,0.04), transparent 55%),
       var(--bg-0);
     color: var(--ink);
     font-family:'Zen Kaku Gothic New', sans-serif;
@@ -99,7 +99,7 @@
   .field textarea{ resize:vertical; min-height:64px; line-height:1.6; font-family:'Zen Kaku Gothic New', sans-serif; }
   .field textarea.tall{ min-height: 100px; }
   .field input:focus, .field select:focus, .field textarea:focus{
-    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,140,255,0.15);
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,255,255,0.14);
   }
   .field select{ appearance:none; background-image:
     linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
@@ -130,7 +130,7 @@
   .generate-btn{
     width:100%; margin-top: 20px;
     font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:14.5px;
-    color:#0a0b10; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#0a0a0a; background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border:none; border-radius: 11px; padding: 14px; cursor:pointer;
     box-shadow: 0 10px 26px var(--accent-glow);
     transition: transform .08s ease, box-shadow .12s ease;
@@ -169,11 +169,11 @@
     border-radius: 999px; padding: 9px 20px; cursor:pointer;
     transition: background .12s ease, box-shadow .12s ease;
   }
-  .print-btn:hover{ background: rgba(124,140,255,0.12); box-shadow: 0 0 0 4px rgba(124,140,255,0.08); }
+  .print-btn:hover{ background: rgba(255,255,255,0.10); box-shadow: 0 0 0 4px rgba(255,255,255,0.06); }
   .print-btn:disabled{ opacity:.35; cursor:default; box-shadow:none; }
   .docx-btn{
     font-family:'Zen Kaku Gothic New', sans-serif; font-weight:700; font-size:13.5px;
-    color:#0a0b10; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#0a0a0a; background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border:none; border-radius: 999px; padding: 9px 20px; cursor:pointer;
     box-shadow: 0 6px 18px var(--accent-glow);
     transition: transform .08s ease, box-shadow .12s ease;
@@ -182,7 +182,7 @@
   .docx-btn:disabled{ opacity:.3; cursor:default; transform:none; box-shadow:none; }
 
   .preview-stage{
-    background: radial-gradient(600px 300px at 50% -10%, rgba(124,140,255,0.10), transparent 60%), #05060a;
+    background: radial-gradient(600px 300px at 50% -10%, rgba(255,255,255,0.05), transparent 60%), #050505;
     border: 1px solid var(--border-soft);
     border-radius: 16px;
     padding: 32px;
