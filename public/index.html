@@ -93,6 +93,12 @@
   }
   .row2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .row3{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .mini-count{ display:flex; flex-direction:column; gap:5px; align-items:center; }
+  .mini-count input[type=number]{
+    width:100%; text-align:center; font-size:16px; font-weight:700;
+    background:#0d0f16; border:1px solid var(--border); border-radius:9px; padding:8px 4px; color:var(--ink);
+  }
+  .mini-count span{ font-size:11px; color: var(--ink-soft); }
 
   .toggle-row{
     display:flex; align-items:center; justify-content:space-between;
@@ -278,33 +284,45 @@
         <label for="topic">出題範囲・テーマ <span class="opt" style="color:var(--danger)">required</span></label>
         <textarea id="topic" placeholder="例：電流とオームの法則、光合成と呼吸、江戸時代の産業と交通 など"></textarea>
       </div>
-      <div class="row3">
-        <div class="field">
-          <label for="format">出題形式</label>
-          <select id="format">
-            <option value="mixed">選択式・記述式・計算問題を混在</option>
-            <option value="mc">選択式のみ</option>
-            <option value="desc">記述式のみ</option>
-            <option value="calc">計算問題（穴埋め式）のみ</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="difficulty">難易度</label>
-          <select id="difficulty">
-            <option value="easy">やさしい</option>
-            <option value="normal" selected>標準</option>
-            <option value="hard">難しい</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="count">問題数</label>
-          <input type="number" id="count" value="8" min="1" max="20">
-        </div>
-      </div>
       <div class="field">
-        <label for="totalPoints">配点合計</label>
-        <input type="number" id="totalPoints" value="100" min="1" max="200">
+        <label>出題形式の内訳（合計20問まで）</label>
+        <div class="row3">
+          <div class="mini-count">
+            <input type="number" id="mcCount" value="3" min="0" max="20">
+            <span>選択式</span>
+          </div>
+          <div class="mini-count">
+            <input type="number" id="descCount" value="3" min="0" max="20">
+            <span>記述式</span>
+          </div>
+          <div class="mini-count">
+            <input type="number" id="calcCount" value="2" min="0" max="20">
+            <span>計算問題</span>
+          </div>
+        </div>
       </div>
+      <div class="row2">
+        <div class="field">
+          <label for="difficultyMode">難易度</label>
+          <select id="difficultyMode">
+            <option value="easy">やさしい（全問）</option>
+            <option value="normal" selected>標準（全問）</option>
+            <option value="hard">難しい（全問）</option>
+            <option value="progression">前半やさしく→後半難しく</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="totalPoints">配点合計</label>
+          <input type="number" id="totalPoints" value="100" min="1" max="200">
+        </div>
+      </div>
+      <label class="toggle-row">
+        AIによる自己検算（誤りがあれば自動修正）
+        <span class="switch">
+          <input type="checkbox" id="enableVerification" checked>
+          <span class="track"></span>
+        </span>
+      </label>
 
       <div class="section-title">Geminiへの追加指示</div>
       <div class="section-hint">教科書の本文を貼り付けたり、細かい要望を書くほど出題の精度が上がります。</div>
@@ -419,9 +437,12 @@
   }
   const KANA = ['ア','イ','ウ','エ','オ','カ'];
 
-  function setLoading(v){
+  function setLoading(v, withVerification){
     genBtn.disabled = v;
     loadingLine.classList.toggle('active', v);
+    if (v) {
+      loadingLine.querySelector('span:last-child').textContent = withVerification ? '作成中…（このあと自己検算も行います）' : '作成中…';
+    }
   }
   function showStatus(text, isError){
     statusMsg.textContent = text || '';
@@ -505,10 +526,12 @@
     const subject = document.getElementById('subject').value.trim();
     const grade = document.getElementById('grade').value.trim();
     const topic = document.getElementById('topic').value.trim();
-    const format = document.getElementById('format').value;
-    const difficulty = document.getElementById('difficulty').value;
-    const count = Math.min(20, Math.max(1, parseInt(document.getElementById('count').value, 10) || 8));
+    const mcCount = Math.max(0, Math.min(20, parseInt(document.getElementById('mcCount').value, 10) || 0));
+    const descCount = Math.max(0, Math.min(20, parseInt(document.getElementById('descCount').value, 10) || 0));
+    const calcCount = Math.max(0, Math.min(20, parseInt(document.getElementById('calcCount').value, 10) || 0));
+    const difficultyMode = document.getElementById('difficultyMode').value;
     const totalPoints = Math.min(200, Math.max(1, parseInt(document.getElementById('totalPoints').value, 10) || 100));
+    const enableVerification = document.getElementById('enableVerification').checked;
     const referenceText = document.getElementById('referenceText').value.trim();
     const sampleProblems = document.getElementById('sampleProblems').value.trim();
     const keywords = document.getElementById('keywords').value.trim();
@@ -522,15 +545,20 @@
       document.getElementById('topic').focus();
       return;
     }
+    if (mcCount + descCount + calcCount <= 0) {
+      showStatus('選択式・記述式・計算問題のいずれか1問以上を指定してください。', true);
+      return;
+    }
 
-    setLoading(true);
+    setLoading(true, enableVerification);
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subject, grade, topic, format, difficulty, count, totalPoints,
-          referenceText, sampleProblems, keywords, extraInstructions
+          subject, grade, topic, mcCount, descCount, calcCount, difficultyMode, totalPoints,
+          referenceText, sampleProblems, keywords, extraInstructions,
+          skipVerification: !enableVerification
         })
       });
       const data = await res.json();
@@ -546,7 +574,13 @@
       odtBtn.disabled = false;
       pngBtn.disabled = false;
       previewLabel.textContent = `全${questions.length}問・${totalPoints}点満点`;
-      showStatus(`${questions.length}問 作成しました。`);
+      if (!enableVerification) {
+        showStatus(`${questions.length}問 作成しました。（自己検算はスキップしました）`);
+      } else if (data.verified === false) {
+        showStatus(`${questions.length}問 作成しました。（自己検算に失敗したため未検算の内容です。内容をご確認ください）`, true);
+      } else {
+        showStatus(`${questions.length}問 作成しました。（AIによる自己検算 済み）`);
+      }
     } catch (err) {
       console.error(err);
       showStatus(err.message || 'テスト用紙の作成に失敗しました。', true);
