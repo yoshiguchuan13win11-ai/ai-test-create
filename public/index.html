@@ -234,6 +234,28 @@
   }
 
   .answer-sheet{ margin-top: 26px; page-break-before: always; }
+
+  .hidden{ display:none !important; }
+
+  /* --- ドリル形式(大問+小問+ブラケット解答) --- */
+  .drill-title{ font-size: 15px; font-weight:700; margin: 0 0 18px; }
+  .drill-section{ margin-bottom: 24px; page-break-inside: avoid; }
+  .drill-head{ display:flex; align-items:flex-start; gap:8px; margin-bottom: 12px; }
+  .drill-num{
+    flex:none; border: 1.4px solid #1a1a1a; padding: 0px 6px; font-weight:700; font-size:13px; line-height:1.5;
+  }
+  .drill-instruction{ font-size: 13.5px; line-height:1.7; }
+  .drill-items{ display:flex; flex-wrap:wrap; gap: 16px 4%; margin-left: 4px; }
+  .drill-item{ flex: 0 0 30%; font-size: 13px; }
+  .drill-item.long{ flex: 0 0 100%; display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .drill-item .qline{ line-height:1.7; }
+  .drill-item .bracket{ display:block; text-align:center; color:#444; font-size:13px; margin-top:4px; letter-spacing:1px; }
+  .drill-item.long .bracket{ flex:none; margin-top:0; }
+  .drill-footer{ text-align:center; font-size:16px; margin-top: 34px; }
+
+  .drill-answer-row{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12.5px; margin-bottom:10px; }
+  .drill-answer-row .a-item{ color:#333; }
+  .drill-answer-row .a-item b{ color:#000; }
   .answer-sheet h2{ font-size:16px; border-bottom:2px solid #1a1a1a; padding-bottom:6px; margin-bottom:14px; }
   .a-row{ display:flex; gap:12px; font-size:13px; margin-bottom:10px; align-items:baseline; }
   .a-row .a-num{ font-weight:700; flex:none; width:32px; }
@@ -285,22 +307,60 @@
         <textarea id="topic" placeholder="例：電流とオームの法則、光合成と呼吸、江戸時代の産業と交通 など"></textarea>
       </div>
       <div class="field">
-        <label>出題形式の内訳（合計20問まで）</label>
-        <div class="row3">
-          <div class="mini-count">
-            <input type="number" id="mcCount" value="3" min="0" max="20">
-            <span>選択式</span>
+        <label for="layoutStyle">出題スタイル</label>
+        <select id="layoutStyle">
+          <option value="standard">標準テスト形式（得点欄・氏名欄あり）</option>
+          <option value="drill">問題集・ドリル形式（大問+小問、コンパクト）</option>
+        </select>
+      </div>
+
+      <div id="standardFields">
+        <div class="field">
+          <label>出題形式の内訳（合計20問まで）</label>
+          <div class="row3">
+            <div class="mini-count">
+              <input type="number" id="mcCount" value="3" min="0" max="20">
+              <span>選択式</span>
+            </div>
+            <div class="mini-count">
+              <input type="number" id="descCount" value="3" min="0" max="20">
+              <span>記述式</span>
+            </div>
+            <div class="mini-count">
+              <input type="number" id="calcCount" value="2" min="0" max="20">
+              <span>計算問題</span>
+            </div>
           </div>
-          <div class="mini-count">
-            <input type="number" id="descCount" value="3" min="0" max="20">
-            <span>記述式</span>
-          </div>
-          <div class="mini-count">
-            <input type="number" id="calcCount" value="2" min="0" max="20">
-            <span>計算問題</span>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="totalPoints">配点合計</label>
+            <input type="number" id="totalPoints" value="100" min="1" max="200">
           </div>
         </div>
       </div>
+
+      <div id="drillFields" class="hidden">
+        <div class="field">
+          <label for="drillTitle">プリントタイトル <span class="opt">optional</span></label>
+          <input type="text" id="drillTitle" placeholder="例：期末テスト予想問題">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="sectionCount">大問の数</label>
+            <input type="number" id="sectionCount" value="4" min="1" max="8">
+          </div>
+          <div class="field">
+            <label for="subQuestionCount">小問の合計数</label>
+            <input type="number" id="subQuestionCount" value="20" min="1" max="60">
+          </div>
+        </div>
+        <div class="field">
+          <label for="pageLabel">ページ番号 (No.) <span class="opt">optional</span></label>
+          <input type="text" id="pageLabel" placeholder="例：1">
+        </div>
+      </div>
+
       <div class="row2">
         <div class="field">
           <label for="difficultyMode">難易度</label>
@@ -310,10 +370,6 @@
             <option value="hard">難しい（全問）</option>
             <option value="progression">前半やさしく→後半難しく</option>
           </select>
-        </div>
-        <div class="field">
-          <label for="totalPoints">配点合計</label>
-          <input type="number" id="totalPoints" value="100" min="1" max="200">
         </div>
       </div>
       <label class="toggle-row">
@@ -413,8 +469,19 @@
   const odtBtn = document.getElementById('odtBtn');
   const pngBtn = document.getElementById('pngBtn');
   const previewLabel = document.getElementById('previewLabel');
+  const layoutStyleSelect = document.getElementById('layoutStyle');
+  const standardFields = document.getElementById('standardFields');
+  const drillFields = document.getElementById('drillFields');
+  let lastLayoutStyle = 'standard';
   let lastQuestions = null;
+  let lastSections = null;
   let lastOpts = null;
+
+  layoutStyleSelect.addEventListener('change', () => {
+    const isDrill = layoutStyleSelect.value === 'drill';
+    standardFields.classList.toggle('hidden', isDrill);
+    drillFields.classList.toggle('hidden', !isDrill);
+  });
 
   // 万一Gemini側の指示が漏れてLaTeX記法が混じった場合の保険的な変換
   function cleanMath(str){
@@ -449,7 +516,7 @@
     statusMsg.classList.toggle('error', !!isError);
   }
 
-  function renderPaper(questions, opts){
+  function renderStandardPaper(questions, opts){
     const subject = opts.subject || 'テスト';
     const grade = opts.grade || '';
     const school = opts.schoolName || '';
@@ -519,18 +586,70 @@
     `;
   }
 
+  function renderDrillPaper(sections, opts){
+    const subject = opts.subject || '問題';
+    const grade = opts.grade || '';
+    const drillTitle = opts.drillTitle || '';
+    const pageLabel = (opts.pageLabel || '').trim();
+    const nextLabel = pageLabel && /^\d+$/.test(pageLabel) ? String(parseInt(pageLabel, 10) + 1) : '';
+    const includeAnswers = opts.includeAnswerSheet;
+
+    const titleParts = [subject, grade, drillTitle].filter(Boolean).join('　');
+    const titleText = titleParts + (pageLabel ? `　No.${pageLabel}` : '');
+
+    let bodyHtml = '';
+    sections.forEach((sec, si) => {
+      const subQs = sec.subQuestions || [];
+      const longThreshold = 14;
+      bodyHtml += `<div class="drill-section">
+        <div class="drill-head">
+          <span class="drill-num">${si + 1}</span>
+          <span class="drill-instruction">${escapeHtml(cleanMath(sec.instruction))}</span>
+        </div>
+        <div class="drill-items">`;
+      subQs.forEach((sq, qi) => {
+        const text = cleanMath(sq.question || '');
+        const isLong = text.length > longThreshold;
+        bodyHtml += `<div class="drill-item${isLong ? ' long' : ''}">
+          <span class="qline">(${qi + 1}) ${escapeHtml(text)}</span>
+          <span class="bracket">［　　　　　］</span>
+        </div>`;
+      });
+      bodyHtml += `</div></div>`;
+    });
+
+    let answerHtml = '';
+    if (includeAnswers) {
+      answerHtml = `<div class="answer-sheet"><h2>解答（教員用）</h2>` +
+        sections.map((sec, si) => `
+          <div style="margin-bottom:14px;">
+            <div style="font-weight:700; font-size:13px; margin-bottom:6px;">${si + 1}</div>
+            <div class="drill-answer-row">
+              ${(sec.subQuestions || []).map((sq, qi) => `<span class="a-item">(${qi + 1}) <b>${escapeHtml(cleanMath(sq.answer))}</b></span>`).join('')}
+            </div>
+          </div>
+        `).join('') + `</div>`;
+    }
+
+    return `
+      <div class="paper-page">
+        <p class="drill-title">${escapeHtml(titleText)}</p>
+        ${bodyHtml}
+        ${nextLabel ? `<p class="drill-footer">次の No.${nextLabel} に進みなさい。</p>` : ''}
+        ${answerHtml}
+      </div>
+    `;
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     showStatus('');
 
+    const layoutStyle = layoutStyleSelect.value;
     const subject = document.getElementById('subject').value.trim();
     const grade = document.getElementById('grade').value.trim();
     const topic = document.getElementById('topic').value.trim();
-    const mcCount = Math.max(0, Math.min(20, parseInt(document.getElementById('mcCount').value, 10) || 0));
-    const descCount = Math.max(0, Math.min(20, parseInt(document.getElementById('descCount').value, 10) || 0));
-    const calcCount = Math.max(0, Math.min(20, parseInt(document.getElementById('calcCount').value, 10) || 0));
     const difficultyMode = document.getElementById('difficultyMode').value;
-    const totalPoints = Math.min(200, Math.max(1, parseInt(document.getElementById('totalPoints').value, 10) || 100));
     const enableVerification = document.getElementById('enableVerification').checked;
     const referenceText = document.getElementById('referenceText').value.trim();
     const sampleProblems = document.getElementById('sampleProblems').value.trim();
@@ -545,9 +664,32 @@
       document.getElementById('topic').focus();
       return;
     }
-    if (mcCount + descCount + calcCount <= 0) {
-      showStatus('選択式・記述式・計算問題のいずれか1問以上を指定してください。', true);
-      return;
+
+    const payload = {
+      layoutStyle, subject, grade, topic, difficultyMode,
+      referenceText, sampleProblems, keywords, extraInstructions,
+      skipVerification: !enableVerification
+    };
+
+    let totalPoints = 100;
+    if (layoutStyle === 'drill') {
+      payload.sectionCount = Math.max(1, Math.min(8, parseInt(document.getElementById('sectionCount').value, 10) || 4));
+      payload.subQuestionCount = Math.max(1, Math.min(60, parseInt(document.getElementById('subQuestionCount').value, 10) || 20));
+      payload.drillTitle = document.getElementById('drillTitle').value.trim();
+      payload.pageLabel = document.getElementById('pageLabel').value.trim();
+    } else {
+      const mcCount = Math.max(0, Math.min(20, parseInt(document.getElementById('mcCount').value, 10) || 0));
+      const descCount = Math.max(0, Math.min(20, parseInt(document.getElementById('descCount').value, 10) || 0));
+      const calcCount = Math.max(0, Math.min(20, parseInt(document.getElementById('calcCount').value, 10) || 0));
+      if (mcCount + descCount + calcCount <= 0) {
+        showStatus('選択式・記述式・計算問題のいずれか1問以上を指定してください。', true);
+        return;
+      }
+      totalPoints = Math.min(200, Math.max(1, parseInt(document.getElementById('totalPoints').value, 10) || 100));
+      payload.mcCount = mcCount;
+      payload.descCount = descCount;
+      payload.calcCount = calcCount;
+      payload.totalPoints = totalPoints;
     }
 
     setLoading(true, enableVerification);
@@ -555,35 +697,53 @@
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject, grade, topic, mcCount, descCount, calcCount, difficultyMode, totalPoints,
-          referenceText, sampleProblems, keywords, extraInstructions,
-          skipVerification: !enableVerification
-        })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `サーバーエラー (${res.status})`);
 
-      const questions = data.questions || [];
-      const opts = { subject, grade, schoolName, examDate, totalPoints, includeAnswerSheet };
-      paperArea.innerHTML = renderPaper(questions, opts);
-      lastQuestions = questions;
-      lastOpts = opts;
+      lastLayoutStyle = layoutStyle;
+
+      if (layoutStyle === 'drill') {
+        const sections = data.sections || [];
+        const opts = { subject, grade, drillTitle: payload.drillTitle, pageLabel: payload.pageLabel, includeAnswerSheet };
+        paperArea.innerHTML = renderDrillPaper(sections, opts);
+        lastSections = sections;
+        lastQuestions = null;
+        lastOpts = opts;
+        const totalSub = sections.reduce((sum, s) => sum + ((s.subQuestions || []).length), 0);
+        previewLabel.textContent = `大問${sections.length}・小問${totalSub}問`;
+        if (!enableVerification) {
+          showStatus(`作成しました。（自己検算はスキップしました）`);
+        } else if (data.verified === false) {
+          showStatus(`作成しました。（自己検算に失敗したため未検算の内容です。内容をご確認ください）`, true);
+        } else {
+          showStatus(`作成しました。（AIによる自己検算 済み）`);
+        }
+      } else {
+        const questions = data.questions || [];
+        const opts = { subject, grade, schoolName, examDate, totalPoints, includeAnswerSheet };
+        paperArea.innerHTML = renderStandardPaper(questions, opts);
+        lastQuestions = questions;
+        lastSections = null;
+        lastOpts = opts;
+        previewLabel.textContent = `全${questions.length}問・${totalPoints}点満点`;
+        if (!enableVerification) {
+          showStatus(`${questions.length}問 作成しました。（自己検算はスキップしました）`);
+        } else if (data.verified === false) {
+          showStatus(`${questions.length}問 作成しました。（自己検算に失敗したため未検算の内容です。内容をご確認ください）`, true);
+        } else {
+          showStatus(`${questions.length}問 作成しました。（AIによる自己検算 済み）`);
+        }
+      }
+
       printBtn.disabled = false;
       docxBtn.disabled = false;
       odtBtn.disabled = false;
       pngBtn.disabled = false;
-      previewLabel.textContent = `全${questions.length}問・${totalPoints}点満点`;
-      if (!enableVerification) {
-        showStatus(`${questions.length}問 作成しました。（自己検算はスキップしました）`);
-      } else if (data.verified === false) {
-        showStatus(`${questions.length}問 作成しました。（自己検算に失敗したため未検算の内容です。内容をご確認ください）`, true);
-      } else {
-        showStatus(`${questions.length}問 作成しました。（AIによる自己検算 済み）`);
-      }
     } catch (err) {
       console.error(err);
-      showStatus(err.message || 'テスト用紙の作成に失敗しました。', true);
+      showStatus(err.message || '作成に失敗しました。', true);
     } finally {
       setLoading(false);
     }
@@ -598,7 +758,7 @@
   }
 
   // Word(.docx) / LibreOffice(.odt) 共通で使う文書構造モデルを作る
-  function buildContentModel(questions, opts){
+  function buildStandardContentModel(questions, opts){
     const model = [];
     if (opts.schoolName) model.push({ text: opts.schoolName, style: 'Meta' });
     model.push({ text: `${opts.subject || 'テスト'}　テスト`, style: 'Title' });
@@ -629,6 +789,36 @@
       questions.forEach((q, i) => {
         model.push({ text: `問${i + 1}　${cleanMath(q.answer)}`, style: 'AnswerBold' });
         if (q.explanation) model.push({ text: cleanMath(q.explanation), style: 'Meta' });
+      });
+    }
+    return model;
+  }
+
+  function buildDrillContentModel(sections, opts){
+    const model = [];
+    const titleParts = [opts.subject, opts.grade, opts.drillTitle].filter(Boolean).join('　');
+    const pageLabel = (opts.pageLabel || '').trim();
+    const titleText = titleParts + (pageLabel ? `　No.${pageLabel}` : '');
+    model.push({ text: titleText || '問題プリント', style: 'Title' });
+
+    sections.forEach((sec, si) => {
+      model.push({ text: `${si + 1}　${cleanMath(sec.instruction)}`, style: 'Question' });
+      (sec.subQuestions || []).forEach((sq, qi) => {
+        model.push({ text: `　(${qi + 1}) ${cleanMath(sq.question)}　［　　　　］`, style: 'Normal' });
+      });
+    });
+
+    if (pageLabel && /^\d+$/.test(pageLabel)) {
+      model.push({ text: `次の No.${parseInt(pageLabel, 10) + 1} に進みなさい。`, style: 'Meta' });
+    }
+
+    if (opts.includeAnswerSheet) {
+      model.push({ text: '解答（教員用）', style: 'AnswerHeading', pageBreak: true });
+      sections.forEach((sec, si) => {
+        model.push({ text: `${si + 1}`, style: 'AnswerBold' });
+        (sec.subQuestions || []).forEach((sq, qi) => {
+          model.push({ text: `　(${qi + 1}) ${cleanMath(sq.answer)}`, style: 'Normal' });
+        });
       });
     }
     return model;
@@ -712,16 +902,26 @@
     });
   }
 
+  function hasContent(){
+    return lastLayoutStyle === 'drill' ? !!lastSections : !!lastQuestions;
+  }
+
+  function getContentModel(){
+    return lastLayoutStyle === 'drill'
+      ? buildDrillContentModel(lastSections, lastOpts)
+      : buildStandardContentModel(lastQuestions, lastOpts);
+  }
+
   function fileBaseName(){
     return `${(lastOpts.subject || 'テスト')}_${(lastOpts.grade || '')}`.replace(/\s+/g, '');
   }
 
   docxBtn.addEventListener('click', async () => {
     if (!window.docx) { showStatus('Wordファイル生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true); return; }
-    if (!lastQuestions) return;
+    if (!hasContent()) return;
     docxBtn.disabled = true;
     try {
-      const model = buildContentModel(lastQuestions, lastOpts);
+      const model = getContentModel();
       const blob = await buildDocxBlob(model);
       downloadBlob(blob, fileBaseName() + '.docx');
     } catch (err) {
@@ -734,10 +934,10 @@
 
   odtBtn.addEventListener('click', async () => {
     if (!window.JSZip) { showStatus('LibreOfficeファイル生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true); return; }
-    if (!lastQuestions) return;
+    if (!hasContent()) return;
     odtBtn.disabled = true;
     try {
-      const model = buildContentModel(lastQuestions, lastOpts);
+      const model = getContentModel();
       const blob = await buildOdtBlob(model);
       downloadBlob(blob, fileBaseName() + '.odt');
     } catch (err) {
@@ -750,7 +950,7 @@
 
   pngBtn.addEventListener('click', async () => {
     if (!window.html2canvas) { showStatus('PNG生成用ライブラリの読み込みに失敗しました。通信環境をご確認のうえページを再読み込みしてください。', true); return; }
-    if (!lastQuestions) return;
+    if (!hasContent()) return;
     pngBtn.disabled = true;
     try {
       await exportPng();
